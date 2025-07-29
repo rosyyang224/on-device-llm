@@ -1,3 +1,11 @@
+//
+//  BottomBar.swift
+//  LocalLLMClientExample
+//
+//  Created by Rosemary Yang on 7/29/25.
+//
+
+
 import SwiftUI
 import PhotosUI
 import LocalLLMClient
