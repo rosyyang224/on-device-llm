@@ -30,9 +30,9 @@ struct ChatView: View {
                     Button("Clear Chat") {
                         ai.resetMessages()
                     }
-                    
+
                     Divider()
-                    
+
                     Button {
                         Task {
                             await ai.toggleTools()
@@ -122,9 +122,9 @@ struct ChatBubbleView: View {
         ]))
         return ai
     }()
-
+    @Previewable @State var mockDataContainer: MockDataContainer = loadMockDataContainer(from: mockData)!
     NavigationStack {
-        ChatView(viewModel: .init(ai: ai))
+        ChatView(viewModel: .init(ai: ai, mockDataContainer: mockDataContainer))
     }
     .environment(ai)
 }

@@ -6,8 +6,8 @@ import LocalLLMClientLlama
 import UIKit
 #endif
 
-// TODO: Convert to struct
 public enum LLMModel: Sendable, CaseIterable, Identifiable {
+    case foundation
     case qwen3
     case qwen3_4b
     case qwen2_5VL_3b
@@ -19,6 +19,7 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
+        case .foundation: "FoundationModels"
         case .qwen3: "MLX / Qwen3 1.7B"
         case .qwen3_4b: "MLX / Qwen3 4B"
         case .qwen2_5VL_3b: "MLX / Qwen2.5VL 3B"
@@ -32,6 +33,7 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
 
     public var id: String {
         switch self {
+        case .foundation: "foundationmodels"
         case .qwen3: "mlx-community/Qwen3-1.7B-4bit"
         case .qwen3_4b: "mlx-community/Qwen3-4B-4bit"
         case .qwen2_5VL_3b: "mlx-community/Qwen2.5-VL-3B-Instruct-abliterated-4bit"
@@ -45,6 +47,7 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
 
     var filename: String? {
         switch self {
+        case .foundation: nil
         case .qwen3, .qwen3_4b, .qwen2_5VL_3b, .gemma3_4b_mlx: nil
         case .phi4mini: "Phi-4-mini-instruct-Q4_K_M.gguf"
         case .gemma3: "gemma-3-1B-it-QAT-Q4_0.gguf"
@@ -55,6 +58,7 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
 
     var mmprojFilename: String? {
         switch self {
+        case .foundation: nil
         case .qwen3, .qwen3_4b, .qwen2_5VL_3b, .gemma3_4b_mlx, .phi4mini, .gemma3: nil
 #if os(macOS)
         case .gemma3_4b: "mmproj-model-f16.gguf"
@@ -66,11 +70,15 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
     }
 
     var isMLX: Bool {
-        filename == nil
+        switch self {
+        case .foundation: false
+        default: filename == nil
+        }
     }
 
     var supportsVision: Bool {
         switch self {
+        case .foundation: false
         case .qwen3, .qwen3_4b, .phi4mini, .gemma3: false
 #if os(macOS)
         case .gemma3_4b: true
@@ -85,14 +93,14 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
         switch self {
         case .gemma3_4b_mlx:
             return ["<end_of_turn>"]
-        case .qwen3, .qwen3_4b, .qwen2_5VL_3b, .phi4mini, .gemma3, .gemma3_4b, .mobileVLM_3b:
+        case .foundation, .qwen3, .qwen3_4b, .qwen2_5VL_3b, .phi4mini, .gemma3, .gemma3_4b, .mobileVLM_3b:
             return []
         }
     }
     
     var supportsTools: Bool {
         switch self {
-        case .qwen3, .qwen3_4b, .phi4mini, .gemma3, .gemma3_4b:
+        case .qwen3, .qwen3_4b, .phi4mini, .gemma3, .gemma3_4b, .foundation:
             return true
         case .qwen2_5VL_3b, .gemma3_4b_mlx, .mobileVLM_3b:
             return false
@@ -128,6 +136,9 @@ final class AI {
     }
 
     func loadLLM() async {
+        // Don't try to download/load anything for FoundationModels pipeline!
+        guard model != .foundation else { return }
+
         isLoading = true
         defer { isLoading = false }
 
@@ -159,6 +170,9 @@ final class AI {
     }
 
     func ask(_ message: String, attachments: [LLMAttachment]) async throws -> AsyncThrowingStream<String, any Error> {
+        guard model != .foundation else {
+            throw LLMError.failedToLoad(reason: "FoundationModels pipeline does not use ask(); handled separately.")
+        }
         guard let session else {
             throw LLMError.failedToLoad(reason: "LLM not loaded")
         }

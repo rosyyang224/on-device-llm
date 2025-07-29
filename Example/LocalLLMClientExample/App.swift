@@ -12,10 +12,11 @@ struct ExampleApp: App {
 
 struct RootView: View {
     @Environment(AI.self) private var ai
-
+    private let mockDataContainer = loadMockDataContainer(from: mockData)!
+    
     var body: some View {
         NavigationStack {
-            ChatView(viewModel: .init(ai: ai))
+            ChatView(viewModel: .init(ai: ai, mockDataContainer: mockDataContainer))
         }
         .disabled(ai.isLoading)
         .overlay {
@@ -23,7 +24,6 @@ struct RootView: View {
                 ZStack {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
-
                     Group {
                         if ai.downloadProgress < 1 {
                             ProgressView("Downloading LLM...", value: ai.downloadProgress)

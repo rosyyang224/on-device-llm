@@ -2,13 +2,22 @@ import SwiftUI
 import LocalLLMClientUtility
 
 struct Downloader: Sendable {
+    let model: LLMModel
+    let downloader: FileDownloader
+
     init(model: LLMModel) {
         self.model = model
         let globs: Globs = switch model {
-        case .qwen3, .qwen3_4b, .qwen2_5VL_3b, .gemma3_4b_mlx: .mlx
-        case .phi4mini, .gemma3, .gemma3_4b, .mobileVLM_3b: .init(
-            (model.filename.map { [$0] } ?? []) + (model.mmprojFilename.map { [$0] } ?? [])
-        )}
+            case .foundation:
+                .init([]) // No files to download for FoundationModels pipeline
+            case .qwen3, .qwen3_4b, .qwen2_5VL_3b, .gemma3_4b_mlx:
+                .mlx
+            case .phi4mini, .gemma3, .gemma3_4b, .mobileVLM_3b:
+                .init(
+                    (model.filename.map { [$0] } ?? []) +
+                    (model.mmprojFilename.map { [$0] } ?? [])
+                )
+        }
 #if os(macOS)
         downloader = FileDownloader(source: .huggingFace(id: model.id, globs: globs))
 #elseif os(iOS)
@@ -20,9 +29,7 @@ struct Downloader: Sendable {
         // try? downloader.removeMetadata() // use it if you update the models
     }
 
-    private let model: LLMModel
-    private let downloader: FileDownloader
-
+    
     var url: URL {
         downloader.destination.appending(component: model.filename ?? "")
     }

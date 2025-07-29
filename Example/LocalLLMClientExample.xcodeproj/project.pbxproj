@@ -150,7 +150,7 @@
 		060009ED2DD25DC500FE5313 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 060009E52DD25DC400FE5313 /* LocalLLMClientExample */;
-			baseConfigurationReferenceRelativePath = Configuration/Build.xcconfig;
+			baseConfigurationReferenceRelativePath = Config/Build.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -215,7 +215,7 @@
 		060009EE2DD25DC500FE5313 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 060009E52DD25DC400FE5313 /* LocalLLMClientExample */;
-			baseConfigurationReferenceRelativePath = Configuration/Build.xcconfig;
+			baseConfigurationReferenceRelativePath = Config/Build.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
