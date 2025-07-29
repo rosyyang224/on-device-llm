@@ -1,60 +1,40 @@
-//
-//  SimpleCacheSettingsView.swift
-//  LocalLLMClientExample
-//
-//  Created by Assistant on 7/29/25.
-//
-
 import SwiftUI
 
-struct acheSettingsView: View {
+struct CacheSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     private let cache = Cache.shared
-    
-    @State private var cacheStats = (responses: 0, contexts: 0, recent: 0)
+
+    @State private var cacheStats = (contexts: 0, tools: 0)
     @State private var showingClearAlert = false
-    
+
     var body: some View {
         NavigationView {
             List {
                 Section("Cache Statistics") {
                     HStack {
-                        Text("Cached Responses")
+                        Text("Cached Tool Calls")
                         Spacer()
-                        Text("\(cacheStats.responses)")
+                        Text("\(cacheStats.tools)")
                             .foregroundColor(.secondary)
                     }
-                    
+
                     HStack {
                         Text("Cached Contexts")
                         Spacer()
                         Text("\(cacheStats.contexts)")
                             .foregroundColor(.secondary)
                     }
-                    
-                    HStack {
-                        Text("Recent Queries")
-                        Spacer()
-                        Text("\(cacheStats.recent)")
-                            .foregroundColor(.secondary)
-                    }
                 }
-                
+
                 Section("Actions") {
-                    Button("Clear Response Cache") {
-                        cache.clearResponseCache()
-                        updateStats()
-                    }
-                    .foregroundColor(.orange)
-                    
                     Button("Clear All Cache") {
                         showingClearAlert = true
                     }
                     .foregroundColor(.red)
                 }
-                
+
                 Section("Info") {
-                    Text("The cache stores recent responses to speed up repeated questions. It automatically manages memory usage.")
+                    Text("The cache stores tool call results and session contexts to speed up repeated requests. It automatically manages memory usage.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -85,11 +65,11 @@ struct acheSettingsView: View {
                     updateStats()
                 }
             } message: {
-                Text("This will clear all cached responses and recent queries.")
+                Text("This will clear all cached tool call results and session contexts.")
             }
         }
     }
-    
+
     private func updateStats() {
         cacheStats = cache.getCacheStats()
     }

@@ -1,10 +1,3 @@
-//
-//  GetHoldingsTool.swift
-//  LocalLLMClientExample
-//
-//  Created by Rosemary Yang on 7/17/25.
-//
-
 import Foundation
 import LocalLLMClient
 import LocalLLMClientMacros
@@ -16,6 +9,8 @@ private func effectiveFilter(_ value: String?) -> String? {
 @Tool("get_holdings")
 struct LocalLLMGetHoldingsTool {
     let description = "Retrieve portfolio holdings, filterable by symbol, asset class, region, account type, profit/loss, or value."
+    let holdingsProvider: @Sendable () -> [Holding]
+    private let cache = Cache.shared
 
     @ToolArguments
     struct Arguments {
@@ -37,8 +32,6 @@ struct LocalLLMGetHoldingsTool {
         var max_marketvalueinbccy: Double?
     }
 
-    let holdingsProvider: @Sendable () -> [Holding]
-
     func call(arguments: Arguments) async throws -> ToolOutput {
         print("[GetHoldingsTool] called with arguments:")
         print("  symbol: \(arguments.symbol ?? "nil")")
@@ -49,6 +42,23 @@ struct LocalLLMGetHoldingsTool {
         print("  max_marketplinsccy: \(arguments.max_marketplinsccy.map { String(describing: $0) } ?? "nil")")
         print("  min_marketvalueinbccy: \(arguments.min_marketvalueinbccy.map { String(describing: $0) } ?? "nil")")
         print("  max_marketvalueinbccy: \(arguments.max_marketvalueinbccy.map { String(describing: $0) } ?? "nil")")
+
+        let cacheArguments: [String: Any?] = [
+            "symbol": arguments.symbol,
+            "assetclass": arguments.assetclass,
+            "countryregion": arguments.countryregion,
+            "accounttype": arguments.accounttype,
+            "min_marketplinsccy": arguments.min_marketplinsccy,
+            "max_marketplinsccy": arguments.max_marketplinsccy,
+            "min_marketvalueinbccy": arguments.min_marketvalueinbccy,
+            "max_marketvalueinbccy": arguments.max_marketvalueinbccy
+        ]
+        if let cached = cache.getCachedToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments) as? [Holding] {
+            print("[GetHoldingsTool] CACHE HIT - returning cached holdings.")
+            return ToolOutput(data: [
+                "holdings": cached
+            ])
+        }
 
         let all = holdingsProvider()
         print("[GetHoldingsTool] total holdings: \(all.count)")
@@ -73,6 +83,8 @@ struct LocalLLMGetHoldingsTool {
                 print("[GetHoldingsTool] Matched #\(i + 1): \(holding)")
             }
         }
+
+        cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: filtered)
 
         return ToolOutput(data: [
             "holdings": filtered

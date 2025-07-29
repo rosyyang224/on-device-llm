@@ -1,8 +1,9 @@
 //
-//  GetHoldingsTool.swift
+//  GetHoldingsTool.swift (with Cache)
 //  LocalLLMClientExample
 //
 //  Created by Rosemary Yang on 7/17/25.
+//  Enhanced with caching by Assistant on 7/29/25.
 //
 
 import Foundation
@@ -50,6 +51,7 @@ struct FoundationModelsGetHoldingsTool: Tool {
     }
     
     let holdingsProvider: @Sendable () -> [Holding]
+    private let cache = Cache.shared
     
     init(holdingsProvider: @escaping @Sendable () -> [Holding]) {
         self.holdingsProvider = holdingsProvider
@@ -66,6 +68,36 @@ struct FoundationModelsGetHoldingsTool: Tool {
         print("  min_marketvalueinbccy: \(arguments.min_marketvalueinbccy.map { String(describing: $0) } ?? "nil")")
         print("  max_marketvalueinbccy: \(arguments.max_marketvalueinbccy.map { String(describing: $0) } ?? "nil")")
 
+        // Create cache key from arguments
+        let cacheArguments: [String: Any?] = [
+            "symbol": arguments.symbol,
+            "assetclass": arguments.assetclass,
+            "countryregion": arguments.countryregion,
+            "accounttype": arguments.accounttype,
+            "min_marketplinsccy": arguments.min_marketplinsccy,
+            "max_marketplinsccy": arguments.max_marketplinsccy,
+            "min_marketvalueinbccy": arguments.min_marketvalueinbccy,
+            "max_marketvalueinbccy": arguments.max_marketvalueinbccy
+        ]
+        
+        // Check cache first - look for the actual filtered results based on tool arguments
+        if let cachedResults = cache.getCachedToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments) as? HoldingsResponse {
+            print("[GetHoldingsTool] CACHE HIT - returning cached results without processing")
+            // Convert cached result back to JSON string
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = .prettyPrinted
+                let jsonData = try encoder.encode(cachedResults)
+                let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding cached holdings data"
+                return jsonString
+            } catch {
+                // If conversion fails, continue to execute normally (don't cache errors)
+                print("[GetHoldingsTool] Failed to convert cached result: \(error)")
+            }
+        }
+
+        print("[GetHoldingsTool] CACHE MISS - executing tool logic")
+        
         let all = holdingsProvider()
         print("[GetHoldingsTool] total holdings: \(all.count)")
 
@@ -103,8 +135,13 @@ struct FoundationModelsGetHoldingsTool: Tool {
             encoder.outputFormatting = .prettyPrinted
             let jsonData = try encoder.encode(response)
             let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding holdings data"
+            
+            // Only cache successful results
+            cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: response)
+            
             return jsonString
         } catch {
+            // Don't cache errors
             return "Error serializing holdings: \(error.localizedDescription)"
         }
     }

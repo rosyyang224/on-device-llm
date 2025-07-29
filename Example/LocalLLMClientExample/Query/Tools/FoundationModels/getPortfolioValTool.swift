@@ -1,8 +1,9 @@
 //
-//  GetPortfolioValTool.swift
+//  GetPortfolioValTool.swift (with Cache)
 //  LocalLLMClientExample
 //
 //  Created by Rosemary Yang on 7/17/25.
+//  Enhanced with caching by Assistant on 7/29/25.
 //
 
 import Foundation
@@ -44,6 +45,7 @@ struct FoundationModelsGetPortfolioValTool: Tool {
     }
     
     let portfolioValProvider: @Sendable () -> [PortfolioValue]
+    private let cache = Cache.shared
     
     init(portfolioValProvider: @escaping @Sendable () -> [PortfolioValue]) {
         self.portfolioValProvider = portfolioValProvider
@@ -55,6 +57,32 @@ struct FoundationModelsGetPortfolioValTool: Tool {
         print("  endDate: \(arguments.endDate ?? "nil")")
         print("  index: \(arguments.index ?? "nil")")
         print("  summary: \(arguments.summary ?? "nil")")
+
+        // Create cache key from arguments
+        let cacheArguments: [String: Any?] = [
+            "startDate": arguments.startDate,
+            "endDate": arguments.endDate,
+            "index": arguments.index,
+            "summary": arguments.summary
+        ]
+        
+        // Check cache first - look for the actual results based on tool arguments
+        if let cachedResults = cache.getCachedToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments) as? PortfolioValResponse {
+            print("[GetPortfolioValTool] CACHE HIT - returning cached results without processing")
+            // Convert cached result back to JSON string
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = .prettyPrinted
+                let jsonData = try encoder.encode(cachedResults)
+                let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding cached portfolio data"
+                return jsonString
+            } catch {
+                // If conversion fails, continue to execute normally (don't cache errors)
+                print("[GetPortfolioValTool] Failed to convert cached result: \(error)")
+            }
+        }
+
+        print("[GetPortfolioValTool] CACHE MISS - executing tool logic")
 
         let all = portfolioValProvider()
         print("[GetPortfolioValTool] total portfolio values: \(all.count)")
@@ -74,59 +102,86 @@ struct FoundationModelsGetPortfolioValTool: Tool {
 
         print("[GetPortfolioValTool] filtered values count: \(filtered.count)")
 
+        let result: PortfolioValResponse
+        
         if let summary = arguments.summary?.lowercased() {
             switch summary {
             case "highest":
                 if let maxPV = filtered.max(by: { $0.marketValue < $1.marketValue }) {
                     print("[GetPortfolioValTool] highest found: \(maxPV)")
-                    let response = PortfolioValResponse(
+                    result = PortfolioValResponse(
                         portfolio_values: nil,
                         type: "highest",
                         portfolio_value: maxPV,
                         points: nil
                     )
-                    return try encodeToJSON(response)
+                } else {
+                    // Don't cache this error case
+                    return "No portfolio values found for highest calculation"
                 }
             case "lowest":
                 if let minPV = filtered.min(by: { $0.marketValue < $1.marketValue }) {
                     print("[GetPortfolioValTool] lowest found: \(minPV)")
-                    let response = PortfolioValResponse(
+                    result = PortfolioValResponse(
                         portfolio_values: nil,
                         type: "lowest",
                         portfolio_value: minPV,
                         points: nil
                     )
-                    return try encodeToJSON(response)
+                } else {
+                    // Don't cache this error case
+                    return "No portfolio values found for lowest calculation"
                 }
             case "trend":
                 let points = filtered
                     .sorted(by: { $0.valueDate < $1.valueDate })
                     .map { TrendPoint(date: $0.valueDate, marketValue: $0.marketValue) }
                 print("[GetPortfolioValTool] trend points count: \(points.count)")
-                let response = PortfolioValResponse(
+                result = PortfolioValResponse(
                     portfolio_values: nil,
                     type: "trend",
                     portfolio_value: nil,
                     points: points
                 )
-                return try encodeToJSON(response)
             case "latest":
                 print("[GetPortfolioValTool] 'latest' treated as raw data request")
-                break // Falls through to return raw filtered data
+                result = PortfolioValResponse(
+                    portfolio_values: filtered,
+                    type: nil,
+                    portfolio_value: nil,
+                    points: nil
+                )
             default:
                 print("[GetPortfolioValTool] Unknown summary type: \(summary)")
-                break
+                result = PortfolioValResponse(
+                    portfolio_values: filtered,
+                    type: nil,
+                    portfolio_value: nil,
+                    points: nil
+                )
             }
+        } else {
+            print("[GetPortfolioValTool] returning raw filtered data")
+            result = PortfolioValResponse(
+                portfolio_values: filtered,
+                type: nil,
+                portfolio_value: nil,
+                points: nil
+            )
         }
-
-        print("[GetPortfolioValTool] returning raw filtered data")
-        let response = PortfolioValResponse(
-            portfolio_values: filtered,
-            type: nil,
-            portfolio_value: nil,
-            points: nil
-        )
-        return try encodeToJSON(response)
+        
+        // Convert to JSON and cache the structured result
+        do {
+            let jsonString = try encodeToJSON(result)
+            
+            // Only cache successful results
+            cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
+            
+            return jsonString
+        } catch {
+            // Don't cache errors
+            return "Error serializing portfolio data: \(error.localizedDescription)"
+        }
     }
     
     private func encodeToJSON<T: Codable>(_ data: T) throws -> String {

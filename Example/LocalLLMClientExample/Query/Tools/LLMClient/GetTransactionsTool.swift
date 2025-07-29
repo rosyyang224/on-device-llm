@@ -1,10 +1,3 @@
-//
-//  GetTransactionsTool.swift
-//  LocalLLMClientExample
-//
-//  Created by Rosemary Yang on 7/17/25.
-//
-
 import Foundation
 import LocalLLMClient
 import LocalLLMClientMacros
@@ -16,6 +9,8 @@ private func effectiveFilter(_ value: String?) -> String? {
 @Tool("get_transactions")
 struct LocalLLMGetTransactionsTool {
     let description = "Retrieve and filter your transaction history by symbol (CUSIP), transaction type, account, date range, or amount."
+    let transactionsProvider: @Sendable () -> [Transaction]
+    private let cache = Cache.shared
 
     @ToolArguments
     struct Arguments {
@@ -35,8 +30,6 @@ struct LocalLLMGetTransactionsTool {
         var maxTransactionAmt: Double?
     }
 
-    let transactionsProvider: @Sendable () -> [Transaction]
-
     func call(arguments: Arguments) async throws -> ToolOutput {
         print("[GetTransactionsTool] called with arguments:")
         print("  cusip: \(arguments.cusip ?? "nil")")
@@ -46,6 +39,22 @@ struct LocalLLMGetTransactionsTool {
         print("  endDate: \(arguments.endDate ?? "nil")")
         print("  minTransactionAmt: \(arguments.minTransactionAmt.map { String(describing: $0) } ?? "nil")")
         print("  maxTransactionAmt: \(arguments.maxTransactionAmt.map { String(describing: $0) } ?? "nil")")
+
+        let cacheArguments: [String: Any?] = [
+            "cusip": arguments.cusip,
+            "transactiontype": arguments.transactiontype,
+            "account": arguments.account,
+            "startDate": arguments.startDate,
+            "endDate": arguments.endDate,
+            "minTransactionAmt": arguments.minTransactionAmt,
+            "maxTransactionAmt": arguments.maxTransactionAmt
+        ]
+        if let cached = cache.getCachedToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments) as? [Transaction] {
+            print("[GetTransactionsTool] CACHE HIT - returning cached transactions.")
+            return ToolOutput(data: [
+                "transactions": cached
+            ])
+        }
 
         let all = transactionsProvider()
         print("[GetTransactionsTool] total transactions: \(all.count)")
@@ -69,6 +78,8 @@ struct LocalLLMGetTransactionsTool {
                 print("[GetTransactionsTool] Matched #\(i + 1): \(txn)")
             }
         }
+
+        cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: filtered)
 
         return ToolOutput(data: [
             "transactions": filtered

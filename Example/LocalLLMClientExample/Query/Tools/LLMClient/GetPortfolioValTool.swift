@@ -1,10 +1,3 @@
-//
-//  GetPortfolioValTool.swift
-//  LocalLLMClientExample
-//
-//  Created by Rosemary Yang on 7/17/25.
-//
-
 import Foundation
 import LocalLLMClient
 import LocalLLMClientMacros
@@ -16,6 +9,8 @@ private func effectiveFilter(_ value: String?) -> String? {
 @Tool("get_portfolio_value")
 struct LocalLLMGetPortfolioValTool {
     let description = "Query your portfolio value snapshots. Filter by date range or index, or retrieve summary statistics like highest, lowest, and trend over time."
+    let portfolioValProvider: @Sendable () -> [PortfolioValue]
+    private let cache = Cache.shared
 
     @ToolArguments
     struct Arguments {
@@ -29,14 +24,23 @@ struct LocalLLMGetPortfolioValTool {
         var summary: String?
     }
 
-    let portfolioValProvider: @Sendable () -> [PortfolioValue]
-
     func call(arguments: Arguments) async throws -> ToolOutput {
         print("[GetPortfolioValTool] called with arguments:")
         print("  startDate: \(arguments.startDate ?? "nil")")
         print("  endDate: \(arguments.endDate ?? "nil")")
         print("  index: \(arguments.index ?? "nil")")
         print("  summary: \(arguments.summary ?? "nil")")
+
+        let cacheArguments: [String: Any?] = [
+            "startDate": arguments.startDate,
+            "endDate": arguments.endDate,
+            "index": arguments.index,
+            "summary": arguments.summary
+        ]
+        if let cached = cache.getCachedToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments) as? [String: Any] {
+            print("[GetPortfolioValTool] CACHE HIT - returning cached result.")
+            return ToolOutput(data: cached)
+        }
 
         let all = portfolioValProvider()
         print("[GetPortfolioValTool] total portfolio values: \(all.count)")
@@ -56,36 +60,38 @@ struct LocalLLMGetPortfolioValTool {
 
         print("[GetPortfolioValTool] filtered values count: \(filtered.count)")
 
+        var result: [String: Any] = [:]
         if let summary = arguments.summary?.lowercased() {
             switch summary {
             case "highest":
                 if let maxPV = filtered.max(by: { $0.marketValue < $1.marketValue }) {
                     print("[GetPortfolioValTool] highest found: \(maxPV)")
-                    return ToolOutput(data: ["type": "highest", "portfolio_value": maxPV])
+                    result = ["type": "highest", "portfolio_value": maxPV]
                 }
             case "lowest":
                 if let minPV = filtered.min(by: { $0.marketValue < $1.marketValue }) {
                     print("[GetPortfolioValTool] lowest found: \(minPV)")
-                    return ToolOutput(data: ["type": "lowest", "portfolio_value": minPV])
+                    result = ["type": "lowest", "portfolio_value": minPV]
                 }
             case "trend":
                 let points = filtered
                     .sorted(by: { $0.valueDate < $1.valueDate })
                     .map { ["date": $0.valueDate, "marketValue": $0.marketValue] }
                 print("[GetPortfolioValTool] trend points count: \(points.count)")
-                return ToolOutput(data: ["type": "trend", "points": points])
+                result = ["type": "trend", "points": points]
             case "latest":
                 print("[GetPortfolioValTool] 'latest' treated as raw data request")
-                break // Falls through to return raw filtered data
+                fallthrough
             default:
-                print("[GetPortfolioValTool] Unknown summary type: \(summary)")
-                break
+                result = ["portfolio_values": filtered]
             }
+        } else {
+            print("[GetPortfolioValTool] returning raw filtered data")
+            result = ["portfolio_values": filtered]
         }
 
-        print("[GetPortfolioValTool] returning raw filtered data")
-        return ToolOutput(data: [
-            "portfolio_values": filtered
-        ])
+        cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
+
+        return ToolOutput(data: result)
     }
 }

@@ -1,8 +1,9 @@
 //
-//  GetTransactionsTool.swift
+//  GetTransactionsTool.swift (with Cache)
 //  LocalLLMClientExample
 //
 //  Created by Rosemary Yang on 7/17/25.
+//  Enhanced with caching by Assistant on 7/29/25.
 //
 
 import Foundation
@@ -47,6 +48,7 @@ struct FoundationModelsGetTransactionsTool: Tool {
     }
     
     let transactionsProvider: @Sendable () -> [Transaction]
+    private let cache = Cache.shared
     
     init(transactionsProvider: @escaping @Sendable () -> [Transaction]) {
         self.transactionsProvider = transactionsProvider
@@ -61,6 +63,35 @@ struct FoundationModelsGetTransactionsTool: Tool {
         print("  endDate: \(arguments.endDate ?? "nil")")
         print("  minTransactionAmt: \(arguments.minTransactionAmt.map { String(describing: $0) } ?? "nil")")
         print("  maxTransactionAmt: \(arguments.maxTransactionAmt.map { String(describing: $0) } ?? "nil")")
+
+        // Create cache key from arguments
+        let cacheArguments: [String: Any?] = [
+            "cusip": arguments.cusip,
+            "transactiontype": arguments.transactiontype,
+            "account": arguments.account,
+            "startDate": arguments.startDate,
+            "endDate": arguments.endDate,
+            "minTransactionAmt": arguments.minTransactionAmt,
+            "maxTransactionAmt": arguments.maxTransactionAmt
+        ]
+        
+        // Check cache first - look for the actual results based on tool arguments
+        if let cachedResults = cache.getCachedToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments) as? TransactionsResponse {
+            print("[GetTransactionsTool] CACHE HIT - returning cached results without processing")
+            // Convert cached result back to JSON string
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = .prettyPrinted
+                let jsonData = try encoder.encode(cachedResults)
+                let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding cached transactions data"
+                return jsonString
+            } catch {
+                // If conversion fails, continue to execute normally (don't cache errors)
+                print("[GetTransactionsTool] Failed to convert cached result: \(error)")
+            }
+        }
+
+        print("[GetTransactionsTool] CACHE MISS - executing tool logic")
 
         let all = transactionsProvider()
         print("[GetTransactionsTool] total transactions: \(all.count)")
@@ -98,8 +129,13 @@ struct FoundationModelsGetTransactionsTool: Tool {
             encoder.outputFormatting = .prettyPrinted
             let jsonData = try encoder.encode(response)
             let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding transactions data"
+            
+            // Only cache successful results
+            cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: response)
+            
             return jsonString
         } catch {
+            // Don't cache errors
             return "Error serializing transactions: \(error.localizedDescription)"
         }
     }

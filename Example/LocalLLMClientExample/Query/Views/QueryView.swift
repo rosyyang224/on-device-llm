@@ -4,9 +4,24 @@ struct QueryView: View {
     @Environment(AI.self) private var ai
     private let mockDataContainer = loadMockDataContainer(from: mockData)!
 
+    @State private var showingCacheSettings = false
+
     var body: some View {
         NavigationStack {
             ChatView(viewModel: .init(ai: ai, mockDataContainer: mockDataContainer))
+                .navigationTitle("Chat")
+                .toolbar {
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            showingCacheSettings = true
+                        } label: {
+                            Label("Cache Settings", systemImage: "archivebox")
+                        }
+                    }
+                }
+        }
+        .sheet(isPresented: $showingCacheSettings) {
+            CacheSettingsView()
         }
         .disabled(ai.isLoading)
         .overlay {
