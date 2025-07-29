@@ -22,6 +22,9 @@ struct QueryView: View {
         }
         .sheet(isPresented: $showingCacheSettings) {
             CacheSettingsView()
+                .frame(minHeight: 350)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .disabled(ai.isLoading)
         .overlay {
