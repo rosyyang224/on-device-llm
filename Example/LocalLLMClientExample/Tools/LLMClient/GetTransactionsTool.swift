@@ -14,7 +14,7 @@ private func effectiveFilter(_ value: String?) -> String? {
 }
 
 @Tool("get_transactions")
-struct GetTransactionsTool {
+struct LocalLLMGetTransactionsTool {
     let description = "Retrieve and filter your transaction history by symbol (CUSIP), transaction type, account, date range, or amount."
 
     @ToolArguments

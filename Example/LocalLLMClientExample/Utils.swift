@@ -26,9 +26,9 @@ func makeLLMTools(container: MockDataContainer) -> [any LLMTool] {
     let portfolio_vals = container.portfolio_value
     let transactions = container.transactions
 
-    let getHoldingsTool = GetHoldingsTool(holdingsProvider: { holdings })
-    let getPortfolioValTool = GetPortfolioValTool(portfolioValProvider: { portfolio_vals })
-    let getTransactionsTool = GetTransactionsTool(transactionsProvider: { transactions })
+    let getHoldingsTool = LocalLLMGetHoldingsTool(holdingsProvider: { holdings })
+    let getPortfolioValTool = LocalLLMGetPortfolioValTool(portfolioValProvider: { portfolio_vals })
+    let getTransactionsTool = LocalLLMGetTransactionsTool(transactionsProvider: { transactions })
 
     return [
         getHoldingsTool,

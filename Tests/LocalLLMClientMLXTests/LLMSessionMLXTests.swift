@@ -164,17 +164,17 @@ func runPortfolioQuery(
     model: LLMModel = .qwen3
 ) async throws -> (
     output: String,
-    holdingsTool: GetHoldingsTool,
-    transactionsTool: GetTransactionsTool,
-    portfolioTool: GetPortfolioValTool
+    holdingsTool: LocalLLMGetHoldingsTool,
+    transactionsTool: LocalLLMGetTransactionsTool,
+    portfolioTool: LocalLLMGetPortfolioValTool
 ) {
     let startTime = Date()
     
     let data = Data(mockData.utf8)
     let container = try! JSONDecoder().decode(MockDataContainer.self, from: data)
-    let holdingsTool = GetHoldingsTool(provider: { container.holdings })
-    let transactionsTool = GetTransactionsTool(provider: { container.transactions })
-    let portfolioTool = GetPortfolioValTool(provider: { container.portfolio_value })
+    let holdingsTool = LocalLLMGetHoldingsTool(provider: { container.holdings })
+    let transactionsTool = LocalLLMGetTransactionsTool(provider: { container.transactions })
+    let portfolioTool = LocalLLMGetPortfolioValTool(provider: { container.portfolio_value })
 
     let session = LLMSession(
         model: makeDownloadModel(model: model),
@@ -218,9 +218,9 @@ extension ModelTests {
             let container = try JSONDecoder().decode(MockDataContainer.self, from: data)
             
             // Test tool creation
-            let holdingsTool = GetHoldingsTool(provider: { container.holdings })
-            let transactionsTool = GetTransactionsTool(provider: { container.transactions })
-            let portfolioTool = GetPortfolioValTool(provider: { container.portfolio_value })
+            let holdingsTool = LocalLLMGetHoldingsTool(provider: { container.holdings })
+            let transactionsTool = LocalLLMGetTransactionsTool(provider: { container.transactions })
+            let portfolioTool = LocalLLMGetPortfolioValTool(provider: { container.portfolio_value })
         }
         
         @Test(.timeLimit(.minutes(1)))

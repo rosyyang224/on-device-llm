@@ -46,7 +46,7 @@ extension ModelTests {
         
         // MARK: - Inline Mock Data and Tool Creation
         
-        private static func createMockPortfolioTools() -> (GetHoldingsTool, GetTransactionsTool, GetPortfolioValTool) {
+        private static func createMockPortfolioTools() -> (LocalLLMGetHoldingsTool, LocalLLMGetTransactionsTool, LocalLLMGetPortfolioValTool) {
             print("Creating mock portfolio tools...")
             
             let data = Data(mockData.utf8)
@@ -56,9 +56,9 @@ extension ModelTests {
                 fatalError("Failed to decode mock data")
             }
             
-            let holdingsTool = GetHoldingsTool(provider: { container.holdings })
-            let transactionsTool = GetTransactionsTool(provider: { container.transactions })
-            let portfolioTool = GetPortfolioValTool(provider: { container.portfolio_value })
+            let holdingsTool = LocalLLMGetHoldingsTool(provider: { container.holdings })
+            let transactionsTool = LocalLLMGetTransactionsTool(provider: { container.transactions })
+            let portfolioTool = LocalLLMGetPortfolioValTool(provider: { container.portfolio_value })
             
             print("Created tools: Holdings(\(container.holdings.count) items), Transactions(\(container.transactions.count) items), Portfolio(\(container.portfolio_value.count) items)")
             
@@ -185,9 +185,9 @@ extension ModelTests {
             let emptyTransactionsProvider: @Sendable () -> [Transaction] = { [] }
             let emptyPortfolioProvider: @Sendable () -> [PortfolioValue] = { [] }
             
-            let holdingsTool = GetHoldingsTool(provider: emptyHoldingsProvider)
-            let transactionsTool = GetTransactionsTool(provider: emptyTransactionsProvider)
-            let portfolioTool = GetPortfolioValTool(provider: emptyPortfolioProvider)
+            let holdingsTool = LocalLLMGetHoldingsTool(provider: emptyHoldingsProvider)
+            let transactionsTool = LocalLLMGetTransactionsTool(provider: emptyTransactionsProvider)
+            let portfolioTool = LocalLLMGetPortfolioValTool(provider: emptyPortfolioProvider)
             
             let session = LLMSession(
                 model: Self.makeToolModel(),
@@ -212,17 +212,17 @@ extension ModelTests {
             model: LLMModel
         ) async throws -> (
             output: String,
-            holdingsTool: GetHoldingsTool,
-            transactionsTool: GetTransactionsTool,
-            portfolioTool: GetPortfolioValTool
+            holdingsTool: LocalLLMGetHoldingsTool,
+            transactionsTool: LocalLLMGetTransactionsTool,
+            portfolioTool: LocalLLMGetPortfolioValTool
         ) {
             let startTime = Date()
             
             let data = Data(mockData.utf8)
             let container = try! JSONDecoder().decode(MockDataContainer.self, from: data)
-            let holdingsTool = GetHoldingsTool(provider: { container.holdings })
-            let transactionsTool = GetTransactionsTool(provider: { container.transactions })
-            let portfolioTool = GetPortfolioValTool(provider: { container.portfolio_value })
+            let holdingsTool = LocalLLMGetHoldingsTool(provider: { container.holdings })
+            let transactionsTool = LocalLLMGetTransactionsTool(provider: { container.transactions })
+            let portfolioTool = LocalLLMGetPortfolioValTool(provider: { container.portfolio_value })
 
             let session = LLMSession(
                 model: LLMSessionLlamaTests.makeToolModel(model: model),

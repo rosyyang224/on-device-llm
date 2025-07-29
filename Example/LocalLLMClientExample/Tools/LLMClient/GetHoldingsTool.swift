@@ -14,7 +14,7 @@ private func effectiveFilter(_ value: String?) -> String? {
 }
 
 @Tool("get_holdings")
-struct GetHoldingsTool {
+struct LocalLLMGetHoldingsTool {
     let description = "Retrieve portfolio holdings, filterable by symbol, asset class, region, account type, profit/loss, or value."
 
     @ToolArguments

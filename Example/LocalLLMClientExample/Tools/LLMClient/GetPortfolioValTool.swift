@@ -14,7 +14,7 @@ private func effectiveFilter(_ value: String?) -> String? {
 }
 
 @Tool("get_portfolio_value")
-struct GetPortfolioValTool {
+struct LocalLLMGetPortfolioValTool {
     let description = "Query your portfolio value snapshots. Filter by date range or index, or retrieve summary statistics like highest, lowest, and trend over time."
 
     @ToolArguments

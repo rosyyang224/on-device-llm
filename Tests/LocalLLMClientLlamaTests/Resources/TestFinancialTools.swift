@@ -75,7 +75,7 @@ public final class GetHoldingsTool: LLMTool {
 
 // MARK: - Transactions Tool
 
-public final class GetTransactionsTool: LLMTool {
+public final class LocalLLMGetTransactionsTool: LLMTool {
     public let name = "get_transactions"
     public let description = "Retrieve and filter your transaction history by symbol (CUSIP), transaction type, account, date range, or amount."
 

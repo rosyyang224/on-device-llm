@@ -5,7 +5,7 @@ import LocalLLMClientUtility
 
 // MARK: - Holdings Tool
 
-public final class GetHoldingsTool: LLMTool {
+public final class LocalLLMGetHoldingsTool: LLMTool {
     public let name = "get_holdings"
     public let description = "Retrieve portfolio holdings, filterable by symbol, asset class, region, account type, profit/loss, or value."
 
@@ -75,7 +75,7 @@ public final class GetHoldingsTool: LLMTool {
 
 // MARK: - Transactions Tool
 
-public final class GetTransactionsTool: LLMTool {
+public final class LocalLLMGetTransactionsTool: LLMTool {
     public let name = "get_transactions"
     public let description = "Retrieve and filter your transaction history by symbol (CUSIP), transaction type, account, date range, or amount."
 
@@ -142,7 +142,7 @@ public final class GetTransactionsTool: LLMTool {
 
 // MARK: - Portfolio Value Tool
 
-public final class GetPortfolioValTool: LLMTool {
+public final class LocalLLMGetPortfolioValTool: LLMTool {
     public let name = "get_portfolio_value"
     public let description = "Query your portfolio value snapshots. Filter by date range or index, or retrieve summary statistics like highest, lowest, and trend over time."
 
