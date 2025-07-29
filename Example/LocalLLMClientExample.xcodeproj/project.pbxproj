@@ -10,6 +10,7 @@
 		06000A1F2DD2640900FE5313 /* LocalLLMClient in Frameworks */ = {isa = PBXBuildFile; productRef = 06000A1E2DD2640900FE5313 /* LocalLLMClient */; };
 		06000A212DD2640900FE5313 /* LocalLLMClientMLX in Frameworks */ = {isa = PBXBuildFile; productRef = 06000A202DD2640900FE5313 /* LocalLLMClientMLX */; };
 		06000A252DD2642D00FE5313 /* LocalLLMClientLlama in Frameworks */ = {isa = PBXBuildFile; productRef = 06000A242DD2642D00FE5313 /* LocalLLMClientLlama */; };
+		A358B42A2E38D68300DAD6DD /* StringMetric in Frameworks */ = {isa = PBXBuildFile; productRef = A358B4292E38D68300DAD6DD /* StringMetric */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +34,7 @@
 				06000A1F2DD2640900FE5313 /* LocalLLMClient in Frameworks */,
 				06000A252DD2642D00FE5313 /* LocalLLMClientLlama in Frameworks */,
 				06000A212DD2640900FE5313 /* LocalLLMClientMLX in Frameworks */,
+				A358B42A2E38D68300DAD6DD /* StringMetric in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,6 +89,7 @@
 				06000A1E2DD2640900FE5313 /* LocalLLMClient */,
 				06000A202DD2640900FE5313 /* LocalLLMClientMLX */,
 				06000A242DD2642D00FE5313 /* LocalLLMClientLlama */,
+				A358B4292E38D68300DAD6DD /* StringMetric */,
 			);
 			productName = LocalLLMClientExample;
 			productReference = 060009E32DD25DC400FE5313 /* LocalLLMClientExample.app */;
@@ -116,6 +119,9 @@
 			);
 			mainGroup = 060009DA2DD25DC400FE5313;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A358B4282E38D68300DAD6DD /* XCRemoteSwiftPackageReference "StringMetric" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 060009E42DD25DC400FE5313 /* Products */;
 			projectDirPath = "";
@@ -150,7 +156,7 @@
 		060009ED2DD25DC500FE5313 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 060009E52DD25DC400FE5313 /* LocalLLMClientExample */;
-			baseConfigurationReferenceRelativePath = Config/Build.xcconfig;
+			baseConfigurationReferenceRelativePath = Query/Config/Build.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -215,7 +221,7 @@
 		060009EE2DD25DC500FE5313 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 060009E52DD25DC400FE5313 /* LocalLLMClientExample */;
-			baseConfigurationReferenceRelativePath = Config/Build.xcconfig;
+			baseConfigurationReferenceRelativePath = Query/Config/Build.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -376,6 +382,17 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A358B4282E38D68300DAD6DD /* XCRemoteSwiftPackageReference "StringMetric" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/autozimu/StringMetric.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		06000A1E2DD2640900FE5313 /* LocalLLMClient */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -388,6 +405,11 @@
 		06000A242DD2642D00FE5313 /* LocalLLMClientLlama */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LocalLLMClientLlama;
+		};
+		A358B4292E38D68300DAD6DD /* StringMetric */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A358B4282E38D68300DAD6DD /* XCRemoteSwiftPackageReference "StringMetric" */;
+			productName = StringMetric;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,5 +1,5 @@
 {
-  "originHash" : "ee22e3f9565b60b235f634e9c34708196d275988f31125e332bb52dc87266417",
+  "originHash" : "81267ba9a5921b187f2d55e3cdf189b9ea116d34d09a8dbf855096685e6c789d",
   "pins" : [
     {
       "identity" : "gzipswift",
@@ -35,6 +35,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "073e6577fbc886ec4e94a0e3adb2cc34e5ddebf5"
+      }
+    },
+    {
+      "identity" : "stringmetric.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/autozimu/StringMetric.swift",
+      "state" : {
+        "revision" : "ac08419f609e53636bd2d5d140d95d1d14960d6a",
+        "version" : "0.3.2"
       }
     },
     {
