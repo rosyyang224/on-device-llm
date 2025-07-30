@@ -1,9 +1,10 @@
 //
-//  GetTransactionsTool.swift (with Cache)
+//  GetTransactionsTool.swift (with Cache + Compression)
 //  LocalLLMClientExample
 //
 //  Created by Rosemary Yang on 7/17/25.
 //  Enhanced with caching by Assistant on 7/29/25.
+//  Enhanced with compression by Assistant on 7/30/25.
 //
 
 import Foundation
@@ -76,19 +77,9 @@ struct FoundationModelsGetTransactionsTool: Tool {
         ]
         
         // Check cache first - look for the actual results based on tool arguments
-        if let cachedResults = cache.getCachedToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments) as? TransactionsResponse {
-            print("[GetTransactionsTool] CACHE HIT - returning cached results without processing")
-            // Convert cached result back to JSON string
-            do {
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = .prettyPrinted
-                let jsonData = try encoder.encode(cachedResults)
-                let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding cached transactions data"
-                return jsonString
-            } catch {
-                // If conversion fails, continue to execute normally (don't cache errors)
-                print("[GetTransactionsTool] Failed to convert cached result: \(error)")
-            }
+        if let cachedResults = cache.getCachedToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments) as? String {
+            print("[GetTransactionsTool] CACHE HIT - returning cached results")
+            return cachedResults
         }
 
         print("[GetTransactionsTool] CACHE MISS - executing tool logic")
@@ -110,34 +101,20 @@ struct FoundationModelsGetTransactionsTool: Tool {
         print("[GetTransactionsTool] filtered transactions: \(filtered.count)")
         if filtered.isEmpty {
             print("[GetTransactionsTool] No transactions matched the filters.")
-        } else {
-            for (i, txn) in filtered.enumerated() {
-                print("[GetTransactionsTool] Matched #\(i + 1): \(txn)")
-            }
+            let emptyResult = "No transactions found matching the specified filters."
+            
+            // Cache the empty result
+            cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: emptyResult)
+            return emptyResult
         }
 
-        // Create a response using the external struct
-        let response = TransactionsResponse(
-            transactions: filtered,
-            count: filtered.count,
-            total_transactions: all.count
-        )
-
-        // Convert to JSON string and return as PromptRepresentable
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            let jsonData = try encoder.encode(response)
-            let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding transactions data"
-            
-            // Only cache successful results
-            cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: response)
-            
-            return jsonString
-        } catch {
-            // Don't cache errors
-            return "Error serializing transactions: \(error.localizedDescription)"
-        }
+        let processedResult = Compressor.processData(filtered, customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
+        print("[GetTransactionsTool] Applied compression! original: \(filtered.count) transactions, compressed size: \(Compressor.estimateTokens(processedResult)) tokens")
+        
+        // Cache the processed result
+        cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: processedResult)
+        
+        return processedResult
     }
 }
 

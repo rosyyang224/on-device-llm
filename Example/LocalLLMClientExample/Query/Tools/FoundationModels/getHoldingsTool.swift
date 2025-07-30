@@ -1,9 +1,10 @@
 //
-//  GetHoldingsTool.swift (with Cache)
+//  GetHoldingsTool.swift (with Cache + Compression)
 //  LocalLLMClientExample
 //
 //  Created by Rosemary Yang on 7/17/25.
 //  Enhanced with caching by Assistant on 7/29/25.
+//  Enhanced with compression by Assistant on 7/30/25.
 //
 
 import Foundation
@@ -81,19 +82,9 @@ struct FoundationModelsGetHoldingsTool: Tool {
         ]
         
         // Check cache first - look for the actual filtered results based on tool arguments
-        if let cachedResults = cache.getCachedToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments) as? HoldingsResponse {
-            print("[GetHoldingsTool] CACHE HIT - returning cached results without processing")
-            // Convert cached result back to JSON string
-            do {
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = .prettyPrinted
-                let jsonData = try encoder.encode(cachedResults)
-                let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding cached holdings data"
-                return jsonString
-            } catch {
-                // If conversion fails, continue to execute normally (don't cache errors)
-                print("[GetHoldingsTool] Failed to convert cached result: \(error)")
-            }
+        if let cachedResults = cache.getCachedToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments) as? String {
+            print("[GetHoldingsTool] CACHE HIT - returning cached results")
+            return cachedResults
         }
 
         print("[GetHoldingsTool] CACHE MISS - executing tool logic")
@@ -116,34 +107,19 @@ struct FoundationModelsGetHoldingsTool: Tool {
         print("[GetHoldingsTool] filtered holdings: \(filtered.count)")
         if filtered.isEmpty {
             print("[GetHoldingsTool] No holdings matched the filters.")
-        } else {
-            for (i, holding) in filtered.enumerated() {
-                print("[GetHoldingsTool] Matched #\(i + 1): \(holding)")
-            }
+            let emptyResult = "No holdings found matching the specified filters."
+            
+            // Cache the empty result
+            cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: emptyResult)
+            return emptyResult
         }
 
-        // Create a response using the external struct
-        let response = HoldingsResponse(
-            holdings: filtered,
-            count: filtered.count,
-            total_holdings: all.count
-        )
-
-        // Convert to JSON string and return as PromptRepresentable
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            let jsonData = try encoder.encode(response)
-            let jsonString = String(data: jsonData, encoding: .utf8) ?? "Error encoding holdings data"
-            
-            // Only cache successful results
-            cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: response)
-            
-            return jsonString
-        } catch {
-            // Don't cache errors
-            return "Error serializing holdings: \(error.localizedDescription)"
-        }
+        let processedResult = Compressor.processData(filtered, customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
+        print("[GetHoldingsTool] Applied compression! original: \(filtered.count) holdings, compressed size: \(Compressor.estimateTokens(processedResult)) tokens")
+        
+        cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: processedResult)
+        
+        return processedResult
     }
 }
 
