@@ -120,6 +120,9 @@ final class AI {
     private(set) var downloadProgress: Double = 0
     var areToolsEnabled = false
 
+    // Add conversation manager for Foundation Models
+    var conversationManager = ConversationManager(maxContextTokens: 3500)
+
     private var session: LLMSession?
     init(mockData: String) {
         let container = loadMockDataContainer(from: mockData) ?? MockDataContainer()
@@ -133,6 +136,9 @@ final class AI {
     
     func resetMessages() {
         messages = [.system("\(sysPrompt)")]
+        // Also reset conversation manager for Foundation Models
+        conversationManager.clearConversation()
+        conversationManager.addSystemMessage(sysPrompt)
     }
 
     func loadLLM() async {

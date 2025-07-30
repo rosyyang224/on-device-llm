@@ -41,6 +41,9 @@ final class ChatViewModel {
         inputAttachments = []
 
         if ai.model == .foundation {
+            // Add to conversation manager instead of ai.messages
+            ai.conversationManager.addUserMessage(currentInput.text)
+        } else {
             ai.messages.append(.user(currentInput.text, attachments: currentInput.images))
         }
 
@@ -50,10 +53,12 @@ final class ChatViewModel {
                 let response: String
 
                 if ai.model == .foundation {
+                    let contextMessages = ai.conversationManager.prepareForLLM()
+                    
                     response = try await foundationSession.send(currentInput.text)
                     generatingText = response
                     print("[sendMessage] FoundationModels reply:", response)
-                    ai.messages.append(.assistant(response))
+                    ai.conversationManager.addAssistantMessage(response)
                 } else {
                     for try await token in try await ai.ask(currentInput.text, attachments: currentInput.images) {
                         generatingText += token
@@ -61,7 +66,11 @@ final class ChatViewModel {
                 }
 
             } catch {
-                ai.messages.append(.assistant("Error: \(error.localizedDescription)"))
+                if ai.model == .foundation {
+                    ai.conversationManager.addAssistantMessage("Error: \(error.localizedDescription)")
+                } else {
+                    ai.messages.append(.assistant("Error: \(error.localizedDescription)"))
+                }
                 (inputText, inputAttachments) = currentInput
                 print("[sendMessage] Error occurred:", error.localizedDescription)
             }
