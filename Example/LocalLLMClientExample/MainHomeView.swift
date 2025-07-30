@@ -10,7 +10,7 @@ struct MainHomeView: View {
             
             HomepageSummaryView()
                 .tabItem {
-                    Label("Summary", systemImage: "chatbubble")
+                    Label("Summary", systemImage: "text.bubble")
                 }
             
             QueryView()
