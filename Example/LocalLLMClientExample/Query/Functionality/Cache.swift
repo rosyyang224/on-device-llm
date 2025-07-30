@@ -49,7 +49,7 @@ final class Cache {
             }
             
             let argString = self.formatArguments(arguments)
-            print("❌ TOOL CACHE MISS: No result for [\(toolName)] with args: \(argString)")
+            print("TOOL CACHE MISS: No result for [\(toolName)] with args: \(argString)")
             return nil
         }
     }
