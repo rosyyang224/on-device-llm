@@ -49,13 +49,13 @@ struct HomepageSummaryView: View {
                         PipelineToggleButton(
                             title: "MLX",
                             isSelected: ai.model.isMLX && ai.model != .foundation,
-                            action: { ai.model = .qwen3 }
+                            action: { ai.model = .qwen3_4b }
                         )
                         
                         PipelineToggleButton(
                             title: "Llama.cpp",
                             isSelected: !ai.model.isMLX && ai.model != .foundation,
-                            action: { ai.model = .phi4mini }
+                            action: { ai.model = .gemma3_4b }
                         )
                     }
                 }
