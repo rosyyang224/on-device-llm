@@ -3,7 +3,7 @@ import LocalLLMClient
 import LocalLLMClientMacros
 
 private func effectiveFilter(_ value: String?) -> String? {
-    return (value == "all") ? nil : value
+    return (value?.lowercased() == "all") ? nil : value
 }
 
 @Tool("get_transactions")
@@ -49,11 +49,11 @@ struct LocalLLMGetTransactionsTool {
             "minTransactionAmt": arguments.minTransactionAmt,
             "maxTransactionAmt": arguments.maxTransactionAmt
         ]
-        if let cached = cache.getCachedToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments) as? [Transaction] {
+        
+        // Check cache first
+        if let cached = cache.getCachedToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments) as? [String: Any] {
             print("[GetTransactionsTool] CACHE HIT - returning cached transactions.")
-            return ToolOutput(data: [
-                "transactions": cached
-            ])
+            return ToolOutput(data: cached)
         }
 
         let all = transactionsProvider()
@@ -73,16 +73,27 @@ struct LocalLLMGetTransactionsTool {
         print("[GetTransactionsTool] filtered transactions: \(filtered.count)")
         if filtered.isEmpty {
             print("[GetTransactionsTool] No transactions matched the filters.")
-        } else {
-            for (i, txn) in filtered.enumerated() {
-                print("[GetTransactionsTool] Matched #\(i + 1): \(txn)")
-            }
+            let result = ["transactions": filtered, "formatted_output": "No transactions matched the filters."] as [String : Any]
+            cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: result)
+            return ToolOutput(data: result)
         }
 
-        cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: filtered)
+        let formattedOutput = Compressor.processData(filtered)
+        
+        print("[GetTransactionsTool] Applied compression! original: \(filtered.count) transactions, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
+        
+        let result: [String: Any] = [
+            "transactions": filtered,
+            "formatted_output": formattedOutput
+        ]
 
-        return ToolOutput(data: [
-            "transactions": filtered
-        ])
+        // Log individual transactions for debugging
+        for (i, txn) in filtered.enumerated() {
+            print("[GetTransactionsTool] Matched #\(i + 1): \(txn)")
+        }
+
+        cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: result)
+
+        return ToolOutput(data: result)
     }
 }

@@ -3,7 +3,7 @@ import LocalLLMClient
 import LocalLLMClientMacros
 
 private func effectiveFilter(_ value: String?) -> String? {
-    return (value == "all") ? nil : value
+    return (value?.lowercased() == "all") ? nil : value
 }
 
 @Tool("get_portfolio_value")
@@ -37,6 +37,8 @@ struct LocalLLMGetPortfolioValTool {
             "index": arguments.index,
             "summary": arguments.summary
         ]
+        
+        // Check cache first
         if let cached = cache.getCachedToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments) as? [String: Any] {
             print("[GetPortfolioValTool] CACHE HIT - returning cached result.")
             return ToolOutput(data: cached)
@@ -60,38 +62,94 @@ struct LocalLLMGetPortfolioValTool {
 
         print("[GetPortfolioValTool] filtered values count: \(filtered.count)")
 
-        var result: [String: Any] = [:]
+        // Handle summary requests first
         if let summary = arguments.summary?.lowercased() {
+            var result: [String: Any] = [:]
+            var formattedOutput = ""
+            
             switch summary {
             case "highest":
                 if let maxPV = filtered.max(by: { $0.marketValue < $1.marketValue }) {
                     print("[GetPortfolioValTool] highest found: \(maxPV)")
-                    result = ["type": "highest", "portfolio_value": maxPV]
+                    let formattedOutput = Compressor.processData(maxPV)
+                    result = [
+                        "type": "highest",
+                        "portfolio_value": maxPV,
+                        "formatted_output": formattedOutput
+                    ]
                 }
             case "lowest":
                 if let minPV = filtered.min(by: { $0.marketValue < $1.marketValue }) {
                     print("[GetPortfolioValTool] lowest found: \(minPV)")
-                    result = ["type": "lowest", "portfolio_value": minPV]
+                    let formattedOutput = Compressor.processData(minPV)
+                    result = [
+                        "type": "lowest",
+                        "portfolio_value": minPV,
+                        "formatted_output": formattedOutput
+                    ]
                 }
             case "trend":
                 let points = filtered
                     .sorted(by: { $0.valueDate < $1.valueDate })
                     .map { ["date": $0.valueDate, "marketValue": $0.marketValue] }
                 print("[GetPortfolioValTool] trend points count: \(points.count)")
-                result = ["type": "trend", "points": points]
+                
+                // Format as string first, then compress
+                let trendString = points.map { point in
+                    let date = point["date"] as? String ?? "Unknown"
+                    let value = point["marketValue"] as? Double ?? 0.0
+                    return "\(date): $\(String(format: "%.2f", value))"
+                }.joined(separator: "\n")
+                
+                let fullTrendOutput = "Portfolio Value Trend:\n" + trendString
+                let formattedOutput = Compressor.processData(fullTrendOutput)
+                
+                print("[GetPortfolioValTool] Applied compression! original: \(points.count) trend points")
+                print("[GetPortfolioValTool] Formatted output:")
+                print(formattedOutput)
+                
+                result = [
+                    "type": "trend",
+                    "points": points,
+                    "formatted_output": formattedOutput
+                ]
             case "latest":
                 print("[GetPortfolioValTool] 'latest' treated as raw data request")
                 fallthrough
             default:
-                result = ["portfolio_values": filtered]
+                // Handle as regular portfolio values with compression
+                return try await handleRegularPortfolioValues(filtered: filtered, arguments: arguments, cacheArguments: cacheArguments)
             }
+            
+            cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
+            return ToolOutput(data: result)
         } else {
-            print("[GetPortfolioValTool] returning raw filtered data")
-            result = ["portfolio_values": filtered]
+            // Handle regular portfolio values request
+            return try await handleRegularPortfolioValues(filtered: filtered, arguments: arguments, cacheArguments: cacheArguments)
         }
+    }
+    
+    private func handleRegularPortfolioValues(
+        filtered: [PortfolioValue],
+        arguments: Arguments,
+        cacheArguments: [String: Any?]
+    ) async throws -> ToolOutput {
+        
+        if filtered.isEmpty {
+            let result = ["portfolio_values": filtered, "formatted_output": "No portfolio values found for the specified criteria."] as [String : Any]
+            cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
+            return ToolOutput(data: result)
+        }
+        
+        let formattedOutput = Compressor.processData(filtered)
+        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
+        
+        let result: [String: Any] = [
+            "portfolio_values": filtered,
+            "formatted_output": formattedOutput
+        ]
 
         cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
-
         return ToolOutput(data: result)
     }
 }

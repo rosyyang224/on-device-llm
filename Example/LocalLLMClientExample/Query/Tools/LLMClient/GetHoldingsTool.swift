@@ -3,7 +3,7 @@ import LocalLLMClient
 import LocalLLMClientMacros
 
 private func effectiveFilter(_ value: String?) -> String? {
-    return (value == "all") ? nil : value
+    return (value?.lowercased() == "all") ? nil : value
 }
 
 @Tool("get_holdings")
@@ -53,11 +53,10 @@ struct LocalLLMGetHoldingsTool {
             "min_marketvalueinbccy": arguments.min_marketvalueinbccy,
             "max_marketvalueinbccy": arguments.max_marketvalueinbccy
         ]
-        if let cached = cache.getCachedToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments) as? [Holding] {
+        
+        if let cached = cache.getCachedToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments) as? [String: Any] {
             print("[GetHoldingsTool] CACHE HIT - returning cached holdings.")
-            return ToolOutput(data: [
-                "holdings": cached
-            ])
+            return ToolOutput(data: cached)
         }
 
         let all = holdingsProvider()
@@ -76,18 +75,30 @@ struct LocalLLMGetHoldingsTool {
         }
 
         print("[GetHoldingsTool] filtered holdings: \(filtered.count)")
+        
         if filtered.isEmpty {
             print("[GetHoldingsTool] No holdings matched the filters.")
-        } else {
-            for (i, holding) in filtered.enumerated() {
-                print("[GetHoldingsTool] Matched #\(i + 1): \(holding)")
-            }
+            let result = ["holdings": filtered, "formatted_output": "No holdings matched the filters."] as [String : Any]
+            cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: result)
+            return ToolOutput(data: result)
         }
 
-        cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: filtered)
+        // Use the existing smart compression logic
+        let formattedOutput = Compressor.processData(filtered)
+        print("[GetHoldingsTool] Applied compression! original: \(filtered.count) holdings, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
+        
+        let result: [String: Any] = [
+            "holdings": filtered,
+            "formatted_output": formattedOutput
+        ]
 
-        return ToolOutput(data: [
-            "holdings": filtered
-        ])
+        // Log individual holdings for debugging
+        for (i, holding) in filtered.enumerated() {
+            print("[GetHoldingsTool] Matched #\(i + 1): \(holding)")
+        }
+
+        cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: result)
+
+        return ToolOutput(data: result)
     }
 }
