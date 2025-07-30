@@ -5,15 +5,18 @@
 //  Created by Rosemary Yang on 7/31/25.
 //
 
-
 import SwiftUI
 import LocalLLMClient
 import FoundationModels
 
 struct HomepageSummaryView: View {
-    @StateObject private var viewModel = HomepageSummaryViewModel()
     @Environment(AI.self) private var ai
-    private let mockDataContainer = loadMockDataContainer(from: mockData)!
+    private let mockDataContainer: MockDataContainer
+    @StateObject private var viewModel = HomepageSummaryViewModel()
+    
+    init(mockDataContainer: MockDataContainer) {
+        self.mockDataContainer = mockDataContainer
+    }
     
     var body: some View {
         NavigationStack {
@@ -55,7 +58,7 @@ struct HomepageSummaryView: View {
                         PipelineToggleButton(
                             title: "Llama.cpp",
                             isSelected: !ai.model.isMLX && ai.model != .foundation,
-                            action: { ai.model = .gemma3_4b }
+                            action: { ai.model = .phi4mini }
                         )
                     }
                 }
@@ -132,7 +135,7 @@ struct HomepageSummaryView: View {
                 // Generate Summary Button
                 Button(action: {
                     Task {
-                        await viewModel.generateSummary(using: ai, mockDataContainer: mockDataContainer)
+                        await viewModel.generateSummary()
                     }
                 }) {
                     HStack {
@@ -200,6 +203,10 @@ struct HomepageSummaryView: View {
                 }
             }
         }
+        .onAppear {
+            let chatViewModel = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer)
+            viewModel.setChatViewModel(chatViewModel)
+        }
 #if !targetEnvironment(simulator)
         .onChange(of: ai.model, initial: true) { _, _ in
             Task {
@@ -208,9 +215,4 @@ struct HomepageSummaryView: View {
         }
 #endif
     }
-}
-
-#Preview {
-    HomepageSummaryView()
-        .environment(AI(mockData: mockData))
 }

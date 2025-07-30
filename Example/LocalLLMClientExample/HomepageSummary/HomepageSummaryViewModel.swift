@@ -5,7 +5,6 @@
 //  Created by Rosemary Yang on 7/31/25.
 //
 
-
 import Foundation
 import LocalLLMClient
 import FoundationModels
@@ -17,42 +16,47 @@ class HomepageSummaryViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private var generateTask: Task<Void, Never>?
-    private var foundationSession: FoundationChatSession?
+    private var chatViewModel: ChatViewModel?
+    private var initialMessageCount: Int = 0
     
-    func generateSummary(using ai: AI, mockDataContainer: MockDataContainer) async {
-        guard !isGenerating else { return }
+    init() {
+        // Empty init - ChatViewModel will be set later via setChatViewModel
+    }
+    
+    func setChatViewModel(_ chatViewModel: ChatViewModel) {
+        self.chatViewModel = chatViewModel
+    }
+    
+    func generateSummary() async {
+        guard let chatViewModel = chatViewModel, !isGenerating else { return }
         
         isGenerating = true
         errorMessage = nil
+        currentSummary = nil
         
         generateTask = Task {
-            do {
-                let prompt = buildPortfolioSummaryPrompt()
-                let response: String
+            initialMessageCount = chatViewModel.messages.count
+            
+            chatViewModel.inputText = buildPortfolioSummaryPrompt()
+            chatViewModel.sendMessage()
+            
+            while chatViewModel.isGenerating {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+            }
+            
+            if chatViewModel.messages.count > initialMessageCount,
+               let lastMessage = chatViewModel.messages.last,
+               lastMessage.role == .assistant {
                 
-                if ai.model == .foundation {
-                    // Use FoundationModels pipeline
-                    if foundationSession == nil {
-                        foundationSession = FoundationChatSession(container: mockDataContainer)
-                    }
-                    response = try await foundationSession!.send(prompt)
-                } else {
-                    // Use local LLM pipeline (MLX or llama.cpp)
-                    var fullResponse = ""
-                    for try await token in try await ai.ask(prompt, attachments: []) {
-                        fullResponse += token
-                    }
-                    response = fullResponse
-                }
+                let response = extractTextFromMessage(lastMessage)
                 
                 await MainActor.run {
                     self.currentSummary = response
                     self.isGenerating = false
                 }
-                
-            } catch {
+            } else {
                 await MainActor.run {
-                    self.errorMessage = "Failed to generate summary: \(error.localizedDescription)"
+                    self.errorMessage = "No response received from the model"
                     self.isGenerating = false
                 }
             }
@@ -63,8 +67,13 @@ class HomepageSummaryViewModel: ObservableObject {
     
     func cancelGeneration() {
         generateTask?.cancel()
+        chatViewModel?.cancelGeneration()
         generateTask = nil
         isGenerating = false
+    }
+    
+    private func extractTextFromMessage(_ message: LLMInput.Message) -> String {
+        return message.content
     }
     
     private func buildPortfolioSummaryPrompt() -> String {

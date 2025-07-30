@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct MainHomeView: View {
+    @Environment(AI.self) private var ai
+    private let mockDataContainer = loadMockDataContainer(from: mockData)!
+    
     var body: some View {
         TabView {
             OCRView()
@@ -8,7 +11,7 @@ struct MainHomeView: View {
                     Label("OCR", systemImage: "viewfinder")
                 }
             
-            HomepageSummaryView()
+            HomepageSummaryView(mockDataContainer: mockDataContainer)
                 .tabItem {
                     Label("Summary", systemImage: "text.bubble")
                 }
