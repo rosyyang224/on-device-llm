@@ -6,9 +6,13 @@
 //
 
 
-struct UserPreferenceSummary: Codable {
-    let top_symbols: [String]
-    let top_actions: [String]
-    let primary_focus: String
-    let summary_statement: String
+struct UserPreferences: Codable {
+    let topSymbols: [String]
+    let preferredGeography: String
+    let preferredAssetClasses: [String]
+    let preferredSectors: [String]
+    let preferredDateRanges: [String]
+    let preferredViews: [String]
+    let preferredGranularity: String
+    let behaviorSummary: String
 }

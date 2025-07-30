@@ -1,14 +1,14 @@
-let userActivityLog2 = """
+let userPref2 = """
 {
-  "user_id": "user_123ghi",
+  "user_id": "user_789ghi",
   "session_id": "sess_456def789",
-  "timestamp": "2025-07-30T09:15:22.345Z",
+  "timestamp": "2025-07-30T14:15:30.123Z",
   "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-  "ip_address": "192.168.1.150",
+  "ip_address": "192.168.1.105",
   "activities": [
     {
       "event": "page_view",
-      "timestamp": "2025-07-30T09:15:22.345Z",
+      "timestamp": "2025-07-30T14:15:30.123Z",
       "properties": {
         "url": "/homepage",
         "title": "Portfolio Homepage",
@@ -17,286 +17,370 @@ let userActivityLog2 = """
     },
     {
       "event": "tab_click",
-      "timestamp": "2025-07-30T09:15:45.567Z",
+      "timestamp": "2025-07-30T14:15:45.456Z",
       "properties": {
-        "tab": "performance_graphs",
+        "tab": "transactions",
         "previous_tab": "homepage"
       }
     },
     {
       "event": "page_view",
-      "timestamp": "2025-07-30T09:15:46.123Z",
+      "timestamp": "2025-07-30T14:15:46.567Z",
       "properties": {
-        "url": "/performance",
-        "title": "Portfolio Performance",
+        "url": "/transactions",
+        "title": "All Transactions",
         "referrer": "/homepage"
       }
     },
     {
-      "event": "date_picker",
-      "timestamp": "2025-07-30T09:16:15.789Z",
-      "properties": {
-        "action": "select_preset",
-        "period_type": "1y",
-        "start_date": "2024-07-30",
-        "end_date": "2025-07-30"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:16:45.234Z",
-      "properties": {
-        "chart_type": "line_chart",
-        "chart_name": "portfolio_value_over_time",
-        "action": "zoom_in",
-        "time_range": "6m"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:17:22.567Z",
-      "properties": {
-        "chart_type": "line_chart",
-        "chart_name": "portfolio_value_over_time",
-        "action": "hover_datapoint",
-        "date": "2025-03-15",
-        "value": "$487,250.00"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:17:55.890Z",
-      "properties": {
-        "chart_type": "line_chart",
-        "chart_name": "portfolio_value_over_time",
-        "action": "hover_datapoint",
-        "date": "2025-06-01",
-        "value": "$512,830.75"
-      }
-    },
-    {
       "event": "filter_applied",
-      "timestamp": "2025-07-30T09:18:33.123Z",
+      "timestamp": "2025-07-30T14:16:05.890Z",
       "properties": {
-        "filter": "comparison_benchmark",
-        "value": "sp500",
-        "context": "performance_comparison"
+        "filter": "transactiontype",
+        "value": "BUY",
+        "previous_filter": "all"
       }
     },
     {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:19:10.456Z",
+      "event": "table_sort",
+      "timestamp": "2025-07-30T14:16:25.123Z",
       "properties": {
-        "chart_type": "dual_line_chart",
-        "chart_name": "portfolio_vs_benchmark",
-        "action": "toggle_series",
-        "series": "benchmark_line"
+        "column": "transactiondate",
+        "direction": "desc",
+        "table": "transactions_table"
       }
     },
     {
-      "event": "date_picker",
-      "timestamp": "2025-07-30T09:19:45.789Z",
+      "event": "row_click",
+      "timestamp": "2025-07-30T14:16:55.456Z",
       "properties": {
-        "action": "select_preset",
-        "period_type": "3y",
-        "start_date": "2022-07-30",
-        "end_date": "2025-07-30"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:20:22.123Z",
-      "properties": {
-        "chart_type": "dual_line_chart",
-        "chart_name": "portfolio_vs_benchmark",
-        "action": "zoom_to_period",
-        "start_date": "2024-01-01",
-        "end_date": "2024-12-31"
-      }
-    },
-    {
-      "event": "filter_applied",
-      "timestamp": "2025-07-30T09:21:05.456Z",
-      "properties": {
-        "filter": "performance_metric",
-        "value": "total_return_percentage",
-        "previous_value": "absolute_value"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:21:40.789Z",
-      "properties": {
-        "chart_type": "area_chart",
-        "chart_name": "cumulative_returns",
-        "action": "hover_datapoint",
-        "date": "2024-11-15",
-        "portfolio_return": "18.7%",
-        "benchmark_return": "12.3%"
-      }
-    },
-    {
-      "event": "date_picker",
-      "timestamp": "2025-07-30T09:22:18.123Z",
-      "properties": {
-        "action": "select_custom_range",
-        "start_date": "2024-01-01",
-        "end_date": "2025-01-01",
-        "period_type": "custom"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:23:02.456Z",
-      "properties": {
-        "chart_type": "volatility_chart",
-        "chart_name": "rolling_volatility",
-        "action": "change_window",
-        "window_size": "30d"
-      }
-    },
-    {
-      "event": "export",
-      "timestamp": "2025-07-30T09:23:45.789Z",
-      "properties": {
-        "type": "performance_data",
-        "format": "csv",
-        "date_range": "2024-01-01_to_2025-01-01",
-        "metrics": ["total_return", "volatility", "sharpe_ratio"]
-      }
-    },
-    {
-      "event": "filter_applied",
-      "timestamp": "2025-07-30T09:24:20.123Z",
-      "properties": {
-        "filter": "time_granularity",
-        "value": "monthly",
-        "previous_value": "daily"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:24:55.456Z",
-      "properties": {
-        "chart_type": "bar_chart",
-        "chart_name": "monthly_returns",
-        "action": "hover_bar",
-        "month": "2024-12",
-        "return_value": "3.2%"
-      }
-    },
-    {
-      "event": "date_picker",
-      "timestamp": "2025-07-30T09:25:30.789Z",
-      "properties": {
-        "action": "select_preset",
-        "period_type": "5y",
-        "start_date": "2020-07-30",
-        "end_date": "2025-07-30"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:26:10.123Z",
-      "properties": {
-        "chart_type": "line_chart",
-        "chart_name": "long_term_performance",
-        "action": "identify_trend",
-        "trend_period": "2020-2025",
-        "cagr": "11.4%"
-      }
-    },
-    {
-      "event": "filter_applied",
-      "timestamp": "2025-07-30T09:26:50.456Z",
-      "properties": {
-        "filter": "drawdown_analysis",
-        "value": "enabled",
-        "max_drawdown_period": "2022-03-15_to_2022-10-12"
-      }
-    },
-    {
-      "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:27:25.789Z",
-      "properties": {
-        "chart_type": "drawdown_chart",
-        "chart_name": "portfolio_drawdowns",
-        "action": "hover_peak_to_trough",
-        "max_drawdown": "-23.7%",
-        "recovery_date": "2023-01-20"
-      }
-    },
-    {
-      "event": "tab_click",
-      "timestamp": "2025-07-30T09:28:05.123Z",
-      "properties": {
-        "tab": "homepage",
-        "previous_tab": "performance_graphs"
+        "row_id": "TXN_001",
+        "symbol": "AAPL",
+        "cusip": "037833100",
+        "transactiontype": "BUY",
+        "transactiondate": "2025-07-25",
+        "transactionamt": 12500.00,
+        "sharesoffacevalue": 75.5,
+        "costprice": 165.56,
+        "row_type": "transaction"
       }
     },
     {
       "event": "page_view",
-      "timestamp": "2025-07-30T09:28:06.234Z",
+      "timestamp": "2025-07-30T14:16:56.567Z",
       "properties": {
-        "url": "/homepage",
-        "title": "Portfolio Homepage",
-        "referrer": "/performance"
+        "url": "/transactions/details/TXN_001",
+        "title": "Transaction Details - AAPL BUY",
+        "referrer": "/transactions",
+        "transactiontype": "BUY"
+      }
+    },
+    {
+      "event": "navigation",
+      "timestamp": "2025-07-30T14:17:35.890Z",
+      "properties": {
+        "from": "/transactions/details/TXN_001",
+        "to": "/transactions",
+        "method": "back_button"
+      }
+    },
+    {
+      "event": "row_click",
+      "timestamp": "2025-07-30T14:17:55.123Z",
+      "properties": {
+        "row_id": "TXN_002",
+        "symbol": "MSFT",
+        "cusip": "594918104",
+        "transactiontype": "BUY",
+        "transactiondate": "2025-07-23",
+        "transactionamt": 8750.50,
+        "sharesoffacevalue": 25.0,
+        "costprice": 350.02,
+        "row_type": "transaction"
+      }
+    },
+    {
+      "event": "page_view",
+      "timestamp": "2025-07-30T14:17:56.234Z",
+      "properties": {
+        "url": "/transactions/details/TXN_002",
+        "title": "Transaction Details - MSFT BUY",
+        "referrer": "/transactions",
+        "transactiontype": "BUY"
+      }
+    },
+    {
+      "event": "navigation",
+      "timestamp": "2025-07-30T14:18:25.567Z",
+      "properties": {
+        "from": "/transactions/details/TXN_002",
+        "to": "/transactions",
+        "method": "back_button"
+      }
+    },
+    {
+      "event": "filter_applied",
+      "timestamp": "2025-07-30T14:18:45.890Z",
+      "properties": {
+        "filter": "transactiondate",
+        "value": "last_30_days",
+        "previous_filter": "all_dates"
+      }
+    },
+    {
+      "event": "table_sort",
+      "timestamp": "2025-07-30T14:19:05.123Z",
+      "properties": {
+        "column": "transactionamt",
+        "direction": "desc",
+        "table": "transactions_table"
+      }
+    },
+    {
+      "event": "row_click",
+      "timestamp": "2025-07-30T14:19:35.456Z",
+      "properties": {
+        "row_id": "TXN_003",
+        "symbol": "GOOGL",
+        "cusip": "02079K305",
+        "transactiontype": "BUY",
+        "transactiondate": "2025-07-20",
+        "transactionamt": 15250.75,
+        "sharesoffacevalue": 110.25,
+        "costprice": 138.32,
+        "row_type": "transaction"
+      }
+    },
+    {
+      "event": "page_view",
+      "timestamp": "2025-07-30T14:19:36.567Z",
+      "properties": {
+        "url": "/transactions/details/TXN_003",
+        "title": "Transaction Details - GOOGL BUY",
+        "referrer": "/transactions",
+        "transactiontype": "BUY"
       }
     },
     {
       "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:28:20.567Z",
+      "timestamp": "2025-07-30T14:20:05.890Z",
+      "properties": {
+        "chart_type": "bar_chart",
+        "chart_name": "transaction_amounts_over_time",
+        "action": "hover",
+        "transaction_type": "BUY"
+      }
+    },
+    {
+      "event": "navigation",
+      "timestamp": "2025-07-30T14:20:35.123Z",
+      "properties": {
+        "from": "/transactions/details/TXN_003",
+        "to": "/transactions",
+        "method": "back_button"
+      }
+    },
+    {
+      "event": "search",
+      "timestamp": "2025-07-30T14:20:55.456Z",
+      "properties": {
+        "query": "NVDA",
+        "type": "transaction_lookup",
+        "results": 2
+      }
+    },
+    {
+      "event": "row_click",
+      "timestamp": "2025-07-30T14:21:15.789Z",
+      "properties": {
+        "row_id": "TXN_004",
+        "symbol": "NVDA",
+        "cusip": "67066G104",
+        "transactiontype": "BUY",
+        "transactiondate": "2025-07-18",
+        "transactionamt": 9850.25,
+        "sharesoffacevalue": 15.5,
+        "costprice": 635.50,
+        "row_type": "transaction"
+      }
+    },
+    {
+      "event": "page_view",
+      "timestamp": "2025-07-30T14:21:16.890Z",
+      "properties": {
+        "url": "/transactions/details/TXN_004",
+        "title": "Transaction Details - NVDA BUY",
+        "referrer": "/transactions",
+        "transactiontype": "BUY"
+      }
+    },
+    {
+      "event": "filter_applied",
+      "timestamp": "2025-07-30T14:21:45.123Z",
+      "properties": {
+        "filter": "costprice",
+        "value": "above_500",
+        "context": "transaction_detail"
+      }
+    },
+    {
+      "event": "navigation",
+      "timestamp": "2025-07-30T14:22:15.456Z",
+      "properties": {
+        "from": "/transactions/details/TXN_004",
+        "to": "/transactions",
+        "method": "back_button"
+      }
+    },
+    {
+      "event": "filter_applied",
+      "timestamp": "2025-07-30T14:22:35.789Z",
+      "properties": {
+        "filter": "sharesoffacevalue",
+        "value": "above_50",
+        "context": "transactions_view"
+      }
+    },
+    {
+      "event": "table_sort",
+      "timestamp": "2025-07-30T14:22:55.123Z",
+      "properties": {
+        "column": "costprice",
+        "direction": "asc",
+        "table": "transactions_table"
+      }
+    },
+    {
+      "event": "row_click",
+      "timestamp": "2025-07-30T14:23:25.456Z",
+      "properties": {
+        "row_id": "TXN_005",
+        "symbol": "TSLA",
+        "cusip": "88160R101",
+        "transactiontype": "BUY",
+        "transactiondate": "2025-07-15",
+        "transactionamt": 6750.00,
+        "sharesoffacevalue": 30.0,
+        "costprice": 225.00,
+        "row_type": "transaction"
+      }
+    },
+    {
+      "event": "page_view",
+      "timestamp": "2025-07-30T14:23:26.567Z",
+      "properties": {
+        "url": "/transactions/details/TXN_005",
+        "title": "Transaction Details - TSLA BUY",
+        "referrer": "/transactions",
+        "transactiontype": "BUY"
+      }
+    },
+    {
+      "event": "chart_interaction",
+      "timestamp": "2025-07-30T14:23:55.890Z",
       "properties": {
         "chart_type": "line_chart",
-        "chart_name": "homepage_performance_summary",
-        "action": "hover_recent_trend",
-        "period": "last_30d",
-        "return": "2.1%"
+        "chart_name": "buy_transaction_frequency",
+        "action": "zoom",
+        "date_range": "last_30_days"
       }
     },
     {
-      "event": "tab_click",
-      "timestamp": "2025-07-30T09:28:45.890Z",
+      "event": "navigation",
+      "timestamp": "2025-07-30T14:24:25.123Z",
       "properties": {
-        "tab": "performance_graphs",
-        "previous_tab": "homepage"
+        "from": "/transactions/details/TXN_005",
+        "to": "/transactions",
+        "method": "back_button"
       }
     },
     {
-      "event": "date_picker",
-      "timestamp": "2025-07-30T09:29:15.123Z",
+      "event": "filter_applied",
+      "timestamp": "2025-07-30T14:24:45.456Z",
       "properties": {
-        "action": "select_preset",
-        "period_type": "ytd",
-        "start_date": "2025-01-01",
-        "end_date": "2025-07-30"
+        "filter": "commission",
+        "value": "below_10",
+        "context": "transactions_view"
+      }
+    },
+    {
+      "event": "table_sort",
+      "timestamp": "2025-07-30T14:25:05.789Z",
+      "properties": {
+        "column": "settlementdate",
+        "direction": "desc",
+        "table": "transactions_table"
+      }
+    },
+    {
+      "event": "search",
+      "timestamp": "2025-07-30T14:25:25.123Z",
+      "properties": {
+        "query": "AMD",
+        "type": "transaction_lookup",
+        "results": 1
+      }
+    },
+    {
+      "event": "row_click",
+      "timestamp": "2025-07-30T14:25:45.456Z",
+      "properties": {
+        "row_id": "TXN_006",
+        "symbol": "AMD",
+        "cusip": "007903107",
+        "transactiontype": "BUY",
+        "transactiondate": "2025-07-10",
+        "transactionamt": 4500.50,
+        "sharesoffacevalue": 45.0,
+        "costprice": 100.01,
+        "row_type": "transaction"
+      }
+    },
+    {
+      "event": "page_view",
+      "timestamp": "2025-07-30T14:25:46.567Z",
+      "properties": {
+        "url": "/transactions/details/TXN_006",
+        "title": "Transaction Details - AMD BUY",
+        "referrer": "/transactions",
+        "transactiontype": "BUY"
       }
     },
     {
       "event": "export",
-      "timestamp": "2025-07-30T09:29:50.456Z",
+      "timestamp": "2025-07-30T14:26:15.890Z",
       "properties": {
-        "type": "trend_analysis_report",
-        "format": "pdf",
-        "includes": ["performance_charts", "benchmark_comparison", "volatility_metrics"],
-        "time_period": "ytd"
+        "type": "buy_transactions_summary",
+        "format": "csv",
+        "filter": "buy_only_last_30_days",
+        "context": "transactions_view",
+        "include_fields": ["symbol", "cusip", "transactiondate", "transactionamt", "sharesoffacevalue", "costprice", "commission"]
       }
     },
     {
       "event": "chart_interaction",
-      "timestamp": "2025-07-30T09:30:25.789Z",
+      "timestamp": "2025-07-30T14:26:45.123Z",
       "properties": {
-        "chart_type": "correlation_heatmap",
-        "chart_name": "asset_correlation_over_time",
-        "action": "select_time_window",
-        "window": "rolling_12m"
+        "chart_type": "pie_chart",
+        "chart_name": "buy_transactions_by_symbol",
+        "action": "click",
+        "label": "GOOGL"
+      }
+    },
+    {
+      "event": "filter_applied",
+      "timestamp": "2025-07-30T14:27:05.456Z",
+      "properties": {
+        "filter": "principal",
+        "value": "above_5000",
+        "context": "transactions_view"
       }
     },
     {
       "event": "session_end",
-      "timestamp": "2025-07-30T09:31:10.123Z",
+      "timestamp": "2025-07-30T14:27:30.789Z",
       "properties": {
-        "duration_sec": 948
+        "duration_sec": 720
       }
     }
   ]
