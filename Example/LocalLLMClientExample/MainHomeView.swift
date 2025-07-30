@@ -8,6 +8,11 @@ struct MainHomeView: View {
                     Label("OCR", systemImage: "viewfinder")
                 }
             
+            HomepageSummaryView()
+                .tabItem {
+                    Label("Summary", systemImage: "chatbubble")
+                }
+            
             QueryView()
                 .tabItem {
                     Label("Query", systemImage: "questionmark.circle")
