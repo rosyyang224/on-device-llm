@@ -60,15 +60,21 @@ struct HomepageSummaryView: View {
             }
         }
         .onAppear {
-            let chatVM = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer)
+            print("Setting up ChatViewModels with userPref1/userPref2...")
+
+            print("[DEBUG] soloViewModel userPref1 (first 100):", userPref1.prefix(100))
+            let chatVM = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref1)
             soloViewModel.setChatViewModel(chatVM)
-            let user1ChatVM = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer)
+
+            print("[DEBUG] user1ViewModel userPref1 (first 100):", userPref1.prefix(100))
+            let user1ChatVM = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref1)
             user1ViewModel.setChatViewModel(user1ChatVM)
-            user1ViewModel.setUserActivityLog(userPref1, userType: "Holdings-Focused")
-            let user2ChatVM = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer)
+
+            print("[DEBUG] user2ViewModel userPref2 (first 100):", userPref2.prefix(100))
+            let user2ChatVM = ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref2)
             user2ViewModel.setChatViewModel(user2ChatVM)
-            user2ViewModel.setUserActivityLog(userPref2, userType: "Transactions-Focused")
         }
+
 #if !targetEnvironment(simulator)
         .onChange(of: ai.model, initial: true) { _, _ in
             Task { await ai.loadLLM() }

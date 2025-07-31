@@ -8,9 +8,9 @@ final class ChatViewModel {
     private let foundationSession: FoundationChatSession
     private let cache = Cache.shared
 
-    init(ai: AI, mockDataContainer: MockDataContainer) {
+    init(ai: AI, mockDataContainer: MockDataContainer, userPreferenceData: String? = nil) {
         self.ai = ai
-        self.foundationSession = FoundationChatSession(container: mockDataContainer)
+        self.foundationSession = FoundationChatSession(container: mockDataContainer, userPreferenceData: userPreferenceData)
     }
 
     var inputText = ""

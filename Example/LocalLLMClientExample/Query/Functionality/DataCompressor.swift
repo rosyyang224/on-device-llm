@@ -293,7 +293,7 @@ extension Compressor {
         )
         
         static let aggressive = CompressionConfig(
-            maxTokens: 1000,
+            maxTokens: 800,
             topHoldingsCount: 5,
             recentTransactionsCount: 10
         )

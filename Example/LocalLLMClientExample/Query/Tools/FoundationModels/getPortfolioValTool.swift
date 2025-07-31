@@ -27,7 +27,7 @@ struct PortfolioValResponse: Codable {
 }
 
 struct FoundationModelsGetPortfolioValTool: Tool {
-    static var name: String = "get_portfolio_value"
+    let name: String = "get_portfolio_value"
     let description = "Query your portfolio value snapshots. Filter by date range or index, or retrieve summary statistics like highest, lowest, and trend over time."
     
     @Generable

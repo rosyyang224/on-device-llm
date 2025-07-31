@@ -32,9 +32,9 @@ struct HomepageSummaryComparisonView: View {
             Spacer()
             Button(action: {
                 Task {
-                    async let s1 = user1ViewModel.generateSummary()
-                    async let s2 = user2ViewModel.generateSummary()
-                    _ = await (s1, s2)
+                    // Sequential execution - User 1 first, then User 2
+                    await user1ViewModel.generateSummary()
+                    await user2ViewModel.generateSummary()
                 }
             }) {
                 HStack {

@@ -21,7 +21,7 @@ struct HoldingsResponse: Codable {
 }
 
 struct FoundationModelsGetHoldingsTool: Tool {
-    static var name: String = "get_holdings"
+    let name: String = "get_holdings"
     let description = "Retrieve holdings, filterable by symbol, asset class, region, account type, profit/loss, or value."
     
     @Generable
@@ -113,10 +113,10 @@ struct FoundationModelsGetHoldingsTool: Tool {
             cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: emptyResult)
             return emptyResult
         }
-
+        
         let processedResult = Compressor.processData(filtered, customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
         print("[GetHoldingsTool] Applied compression! original: \(filtered.count) holdings, compressed size: \(Compressor.estimateTokens(processedResult)) tokens")
-        
+//        print("[GetHoldingsTool] COMPRESSED OUTPUT:", processedResult)
         cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: processedResult)
         
         return processedResult

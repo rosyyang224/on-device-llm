@@ -21,7 +21,7 @@ struct TransactionsResponse: Codable {
 }
 
 struct FoundationModelsGetTransactionsTool: Tool {
-    static var name: String = "get_transactions"
+    let name: String = "get_transactions"
     let description = "Retrieve and filter your transaction history by symbol (CUSIP), transaction type, account, date range, or amount."
     
     @Generable
