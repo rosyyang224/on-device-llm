@@ -121,9 +121,10 @@ final class AI {
     var areToolsEnabled = false
 
     private var session: LLMSession?
-    init(mockData: String) {
+    
+    init(mockData: String, userlogProvider: @escaping @Sendable () -> String = { "" }) {
         let container = loadMockDataContainer(from: mockData) ?? MockDataContainer()
-        self.tools = makeLLMTools(container: container)
+        self.tools = makeLLMTools(container: container, userlogProvider: userlogProvider)
     }
 
     var messages: [LLMInput.Message] {

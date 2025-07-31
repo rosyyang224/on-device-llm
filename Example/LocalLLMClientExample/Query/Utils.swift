@@ -21,7 +21,7 @@ func loadMockDataContainer(from jsonString: String) -> MockDataContainer? {
     }
 }
 
-func makeLLMTools(container: MockDataContainer) -> [any LLMTool] {
+func makeLLMTools(container: MockDataContainer, userlogProvider: @escaping @Sendable () -> String) -> [any LLMTool] {
     let holdings = container.holdings
     let portfolio_vals = container.portfolio_value
     let transactions = container.transactions
@@ -29,11 +29,13 @@ func makeLLMTools(container: MockDataContainer) -> [any LLMTool] {
     let getHoldingsTool = LocalLLMGetHoldingsTool(holdingsProvider: { holdings })
     let getPortfolioValTool = LocalLLMGetPortfolioValTool(portfolioValProvider: { portfolio_vals })
     let getTransactionsTool = LocalLLMGetTransactionsTool(transactionsProvider: { transactions })
+    let getUserPrefTool = LocalLLMGetUserPrefTool(userPreferenceProvider: userlogProvider)
 
     return [
         getHoldingsTool,
         getPortfolioValTool,
         getTransactionsTool,
+        getUserPrefTool,
     ]
 }
 

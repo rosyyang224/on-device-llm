@@ -8,7 +8,14 @@ final class ChatViewModel {
     private let foundationSession: FoundationChatSession
     private let cache = Cache.shared
 
-    init(ai: AI, mockDataContainer: MockDataContainer, userPreferenceData: String? = nil) {
+    // Original initializer for simple cases (no user preferences)
+    init(ai: AI, mockDataContainer: MockDataContainer) {
+        self.ai = ai
+        self.foundationSession = FoundationChatSession(container: mockDataContainer)
+    }
+    
+    // New initializer that matches your HomepageSummaryView usage pattern
+    init(ai: AI, mockDataContainer: MockDataContainer, userPreferenceData: String?) {
         self.ai = ai
         self.foundationSession = FoundationChatSession(container: mockDataContainer, userPreferenceData: userPreferenceData)
     }
@@ -86,6 +93,6 @@ final class ChatViewModel {
     /// Get cache performance stats
     func getCacheStats() -> String {
         let stats = cache.getCacheStats()
-        return "Cache: \(stats.contexts) contexts, \(stats.tools) tools"
+        return "Cache.contexts) contexts, \(stats.tools) tools"
     }
 }
