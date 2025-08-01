@@ -1,25 +1,38 @@
 import SwiftUI
 
 struct MainHomeView: View {
-    @Environment(AI.self) private var ai
     private let mockDataContainer = loadMockDataContainer(from: mockData)!
     
+    private let aiClassic: AI
+    private let aiUser1: AI
+    private let aiUser2: AI
+    private let aiQuery: AI
+
+    init(aiClassic: AI, aiUser1: AI, aiUser2: AI, aiQuery: AI) {
+        self.aiClassic = aiClassic
+        self.aiUser1 = aiUser1
+        self.aiUser2 = aiUser2
+        self.aiQuery = aiQuery
+    }
+
     var body: some View {
         TabView {
-            OCRView()
-                .tabItem {
-                    Label("OCR", systemImage: "viewfinder")
-                }
+            Tab("OCR", systemImage: "viewfinder") {
+                OCRView()
+            }
             
-            HomepageSummaryView(mockDataContainer: mockDataContainer)
-                .tabItem {
-                    Label("Summary", systemImage: "text.bubble")
-                }
+            Tab("Summary", systemImage: "text.bubble") {
+                HomepageSummaryView(
+                    mockDataContainer: mockDataContainer,
+                    aiClassic: aiClassic,
+                    aiUser1: aiUser1,
+                    aiUser2: aiUser2
+                )
+            }
             
-            QueryView()
-                .tabItem {
-                    Label("Query", systemImage: "questionmark.circle")
-                }
+            Tab("Query", systemImage: "questionmark.circle") {
+                QueryView(ai: aiQuery)
+            }
         }
     }
 }
