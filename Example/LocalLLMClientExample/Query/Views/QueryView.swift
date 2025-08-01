@@ -1,14 +1,17 @@
 import SwiftUI
 
 struct QueryView: View {
-    @Environment(AI.self) private var ai
+    let ai: AI
     private let mockDataContainer = loadMockDataContainer(from: mockData)!
 
     @State private var showingCacheSettings = false
 
     var body: some View {
         NavigationStack {
-            ChatView(viewModel: .init(ai: ai, mockDataContainer: mockDataContainer))
+            ChatView(ai: ai, viewModel: ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil
+                )
+            )
+
                 .navigationTitle("Chat")
                 .toolbar {
                     ToolbarItem(placement: .automatic) {
@@ -53,10 +56,4 @@ struct QueryView: View {
         }
 #endif
     }
-}
-
-// Example preview
-#Preview {
-    QueryView()
-        .environment(AI(mockData: mockData))
 }

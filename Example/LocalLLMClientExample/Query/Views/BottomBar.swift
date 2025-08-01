@@ -5,12 +5,13 @@
 //  Created by Rosemary Yang on 7/29/25.
 //
 
-
 import SwiftUI
 import PhotosUI
 import LocalLLMClient
 
 struct BottomBar: View {
+    let ai: AI
+
     @Binding var text: String
     @Binding var attachments: [LLMAttachment]
     let isGenerating: Bool
@@ -18,7 +19,6 @@ struct BottomBar: View {
     let onCancel: () -> Void
 
     @State private var pickedItem: PhotosPickerItem?
-    @Environment(AI.self) private var ai
 
     var body: some View {
         HStack {
@@ -88,46 +88,46 @@ struct BottomBar: View {
 
     @ViewBuilder
     private var modelMenu: some View {
-#if os(macOS)
-            @Bindable var ai = ai
-            Picker(selection: $ai.model) {
-                ForEach(LLMModel.allCases) { model in
-                    Group {
-                        if model.supportsVision {
-                            Text("\(model.name) [VLM]")
-                        } else {
-                            Text(model.name)
-                        }
-                    }
-                    .tag(model)
-                }
-            } label: {
-                Image(systemName: "brain.head.profile")
-            }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .fixedSize(horizontal: true, vertical: false)
-#elseif os(iOS)
-            Menu {
-                ForEach(LLMModel.allCases) { model in
-                    Button {
-                        ai.model = model
-                    } label: {
-                        if model.supportsVision {
-                            Text("\(model.name) [VLM]")
-                        } else {
-                            Text(model.name)
-                        }
-                        if ai.model == model {
-                            Image(systemName: "checkmark")
-                        }
+    #if os(macOS)
+        @Bindable var ai = ai
+        Picker(selection: $ai.model) {
+            ForEach(LLMModel.allCases) { model in
+                Group {
+                    if model.supportsVision {
+                        Text("\(model.name) [VLM]")
+                    } else {
+                        Text(model.name)
                     }
                 }
-            } label: {
-                Image(systemName: "brain.head.profile")
+                .tag(model)
             }
-            .menuStyle(.button)
-#endif
+        } label: {
+            Image(systemName: "brain.head.profile")
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .fixedSize(horizontal: true, vertical: false)
+    #elseif os(iOS)
+        Menu {
+            ForEach(LLMModel.allCases) { model in
+                Button {
+                    ai.model = model
+                } label: {
+                    if model.supportsVision {
+                        Text("\(model.name) [VLM]")
+                    } else {
+                        Text(model.name)
+                    }
+                    if ai.model == model {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "brain.head.profile")
+        }
+        .menuStyle(.button)
+    #endif
     }
 
     @ViewBuilder
@@ -149,14 +149,4 @@ struct BottomBar: View {
             }
         }
     }
-}
-
-#Preview(traits: .sizeThatFitsLayout) {
-    @Previewable @State var text = ""
-    @Previewable @State var attachments: [LLMAttachment] = [
-        .imagePreview, .imagePreview2
-    ]
-
-    BottomBar(text: $text, attachments: $attachments, isGenerating: false, onSubmit: { _ in }, onCancel: {})
-        .environment(AI(mockData: mockData))
 }
