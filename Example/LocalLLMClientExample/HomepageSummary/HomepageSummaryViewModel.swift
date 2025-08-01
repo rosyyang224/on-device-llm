@@ -9,14 +9,16 @@ class HomepageSummaryViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private var generateTask: Task<Void, Never>?
-    private var chatViewModel: ChatViewModel?
+    public var chatViewModel: ChatViewModel?    // <-- made public
     private var initialMessageCount: Int = 0
     private var userPrefData: String?
     
-    init() {
-        // Empty init - ChatViewModel will be set later via setChatViewModel
+    init(chatVM: ChatViewModel) {
+        self.chatViewModel = chatVM
     }
-    
+
+    init() {}
+
     func setChatViewModel(_ chatViewModel: ChatViewModel) {
         self.chatViewModel = chatViewModel
     }

@@ -27,7 +27,7 @@ struct HomepageSummaryHeaderView: View {
 }
 
 struct HomepageAIPipelineSelector: View {
-    @Environment(AI.self) private var ai
+    let ai: AI
 
     var body: some View {
         VStack(spacing: 16) {
@@ -49,7 +49,7 @@ struct HomepageAIPipelineSelector: View {
                 PipelineToggleButton(
                     title: "Llama.cpp",
                     isSelected: !ai.model.isMLX && ai.model != .foundation,
-                    action: { ai.model = .phi4mini }
+                    action: { ai.model = .gemma3_4b }
                 )
             }
         }

@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct HomepageClassicSummaryView: View {
-    @Environment(AI.self) private var ai
     @ObservedObject var soloViewModel: HomepageSummaryViewModel
+    let ai: AI
     
     var body: some View {
         VStack(spacing: 24) {
@@ -10,7 +10,7 @@ struct HomepageClassicSummaryView: View {
                 title: "Portfolio Summary",
                 subtitle: "Generate an AI-powered summary of your entire portfolio"
             )
-            HomepageAIPipelineSelector()
+            HomepageAIPipelineSelector(ai: ai)
             Spacer()
             ScrollView {
                 VStack(spacing: 16) {
