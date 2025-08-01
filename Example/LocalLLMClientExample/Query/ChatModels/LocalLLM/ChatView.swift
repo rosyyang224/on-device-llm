@@ -3,16 +3,16 @@ import LocalLLMClient
 import LocalLLMClientMLX
 
 struct ChatView: View {
+    let ai: AI
     @State var viewModel: ChatViewModel
     @State private var position = ScrollPosition(idType: LLMInput.Message.ID.self)
-
-    @Environment(AI.self) private var ai
 
     var body: some View {
         VStack {
             MessageList(messages: viewModel.messages)
 
             BottomBar(
+                ai: ai,
                 text: $viewModel.inputText,
                 attachments: $viewModel.inputAttachments,
                 isGenerating: viewModel.isGenerating
@@ -56,7 +56,6 @@ struct ChatView: View {
         }
     }
 }
-
 struct MessageList: View {
     let messages: [LLMInput.Message]
 
@@ -110,26 +109,4 @@ struct ChatBubbleView: View {
         .padding(isUser ? .leading : .trailing, 50)
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
     }
-}
-
-#Preview("Text") {
-    @Previewable @State var ai: AI = {
-        let ai = AI(mockData: mockData)
-        ai.setSession(.init(model: .mlx(id: ""), messages: [
-            .user("Hello"),
-            .assistant("Hi! How can I help you?"),
-            .user("What is in these images?", attachments: [.imagePreview, .imagePreview2])
-        ]))
-        return ai
-    }()
-    @Previewable @State var mockDataContainer: MockDataContainer = loadMockDataContainer(from: mockData)!
-    NavigationStack {
-        ChatView(viewModel: .init(ai: ai, mockDataContainer: mockDataContainer))
-    }
-    .environment(ai)
-}
-
-extension LLMAttachment {
-    static let imagePreview = try! Self.image(LLMInputImage(data: .init(contentsOf: URL(string: "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/cats.jpeg")!))!)
-    static let imagePreview2 = try! Self.image(LLMInputImage(data: .init(contentsOf: URL(string: "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/robot.png")!))!)
 }
