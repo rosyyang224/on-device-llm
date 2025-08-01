@@ -88,8 +88,6 @@ public final class FoundationChatSession {
             instructions: instructions
         )
         estimatedContextSize = estimateTokenCount(String(describing: instructions))
-        print("[SESSION DEBUG] Session created, estimated context size: \(estimatedContextSize)")
-        print("[SESSION DEBUG] =====================================")
     }
 
     public func send(_ query: String) async throws -> String {
