@@ -2,36 +2,102 @@ import SwiftUI
 
 struct MainHomeView: View {
     private let mockDataContainer = loadMockDataContainer(from: mockData)!
-    
-    private let aiClassic: AI
-    private let aiUser1: AI
-    private let aiUser2: AI
-    private let aiQuery: AI
+    let aiQuery: AI
 
-    init(aiClassic: AI, aiUser1: AI, aiUser2: AI, aiQuery: AI) {
-        self.aiClassic = aiClassic
-        self.aiUser1 = aiUser1
-        self.aiUser2 = aiUser2
-        self.aiQuery = aiQuery
-    }
+    @State private var aiClassic: AI?
+    @State private var aiUser1: AI?
+    @State private var aiUser2: AI?
+    @State private var summaryModeIsComparison: Bool = false
+    @State private var selectedTab: Int = 0
 
     var body: some View {
-        TabView {
-            Tab("OCR", systemImage: "viewfinder") {
-                OCRView()
+        TabView(selection: $selectedTab) {
+            OCRView()
+                .tabItem {
+                    Label("OCR", systemImage: "viewfinder")
+                }
+                .tag(0)
+
+            HomepageSummaryView(
+                mockDataContainer: mockDataContainer,
+                aiClassic: aiClassic,
+                aiUser1: aiUser1,
+                aiUser2: aiUser2,
+                summaryModeIsComparison: summaryModeIsComparison,
+                onToggleComparison: { isComparison in
+                    handleComparisonToggle(isComparison: isComparison)
+                },
+                requestLoadClassic: loadClassicAI,
+                requestLoadUserAIs: loadUserAIs
+            )
+                .tabItem {
+                    Label("Summary", systemImage: "text.bubble")
+                }
+                .tag(1)
+
+            QueryView(ai: aiQuery)
+                .tabItem {
+                    Label("Query", systemImage: "questionmark.circle")
+                }
+                .tag(2)
+        }
+        .onChange(of: selectedTab) { oldTab, newTab in
+            if oldTab == 1 && newTab != 1 {
+                cleanupAllSummaryAIs()
             }
-            
-            Tab("Summary", systemImage: "text.bubble") {
-                HomepageSummaryView(
-                    mockDataContainer: mockDataContainer,
-                    aiClassic: aiClassic,
-                    aiUser1: aiUser1,
-                    aiUser2: aiUser2
-                )
+        }
+    }
+
+    private func loadClassicAI() {
+        guard aiClassic == nil else { return }
+        Task { @MainActor in
+            print("[DEBUG] Adding aiClassic instance.")
+            aiClassic = AI(mockData: mockData, userlogProvider: { "" })
+        }
+    }
+    private func loadUserAIs() {
+        Task { @MainActor in
+            if aiUser1 == nil {
+                print("[DEBUG] Adding aiUser1 instance.")
+                aiUser1 = AI(mockData: mockData, userlogProvider: { userPref1 })
             }
-            
-            Tab("Query", systemImage: "questionmark.circle") {
-                QueryView(ai: aiQuery)
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            if aiUser2 == nil {
+                print("[DEBUG] Adding aiUser2 instance.")
+                aiUser2 = AI(mockData: mockData, userlogProvider: { userPref2 })
+            }
+        }
+    }
+    private func cleanupAllSummaryAIs() {
+        Task { @MainActor in
+            if aiClassic != nil { print("[DEBUG] Dropping aiClassic instance.") }
+            if aiUser1 != nil { print("[DEBUG] Dropping aiUser1 instance.") }
+            if aiUser2 != nil { print("[DEBUG] Dropping aiUser2 instance.") }
+            aiClassic = nil
+            aiUser1 = nil
+            aiUser2 = nil
+            await Task.yield()
+        }
+    }
+    private func handleComparisonToggle(isComparison: Bool) {
+        summaryModeIsComparison = isComparison
+        if isComparison {
+            loadUserAIs()
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                if aiClassic != nil { print("[DEBUG] Dropping aiClassic instance (comparison mode).") }
+                aiClassic = nil
+                await Task.yield()
+            }
+        } else {
+            loadClassicAI()
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                if aiUser1 != nil { print("[DEBUG] Dropping aiUser1 instance (classic mode).") }
+                if aiUser2 != nil { print("[DEBUG] Dropping aiUser2 instance (classic mode).") }
+                aiUser1 = nil
+                aiUser2 = nil
+                await Task.yield()
             }
         }
     }

@@ -3,78 +3,94 @@ import LocalLLMClient
 import FoundationModels
 
 struct HomepageSummaryView: View {
-    private let mockDataContainer: MockDataContainer
-    private let aiClassic: AI
-    private let aiUser1: AI
-    private let aiUser2: AI
-
-    @State private var showUserPrefComparison: Bool = false
-    @StateObject private var soloViewModel: HomepageSummaryViewModel
-    @StateObject private var user1ViewModel: HomepageSummaryViewModel
-    @StateObject private var user2ViewModel: HomepageSummaryViewModel
-
     init(
         mockDataContainer: MockDataContainer,
-        aiClassic: AI,
-        aiUser1: AI,
-        aiUser2: AI
+        aiClassic: AI?,
+        aiUser1: AI?,
+        aiUser2: AI?,
+        summaryModeIsComparison: Bool,
+        onToggleComparison: @escaping (Bool) -> Void,
+        requestLoadClassic: @escaping () -> Void,
+        requestLoadUserAIs: @escaping () -> Void
     ) {
         self.mockDataContainer = mockDataContainer
         self.aiClassic = aiClassic
         self.aiUser1 = aiUser1
         self.aiUser2 = aiUser2
-
-        _soloViewModel = StateObject(
-            wrappedValue: HomepageSummaryViewModel(
-                chatVM: ChatViewModel(ai: aiClassic, mockDataContainer: mockDataContainer, userPreferenceData: nil)
-            )
-        )
-        _user1ViewModel = StateObject(
-            wrappedValue: HomepageSummaryViewModel(
-                chatVM: ChatViewModel(ai: aiUser1, mockDataContainer: mockDataContainer, userPreferenceData: userPref1)
-            )
-        )
-        _user2ViewModel = StateObject(
-            wrappedValue: HomepageSummaryViewModel(
-                chatVM: ChatViewModel(ai: aiUser2, mockDataContainer: mockDataContainer, userPreferenceData: userPref2)
-            )
-        )
+        self.summaryModeIsComparison = summaryModeIsComparison
+        self.onToggleComparison = onToggleComparison
+        self.requestLoadClassic = requestLoadClassic
+        self.requestLoadUserAIs = requestLoadUserAIs
+        // StateObjects must be initialized this way
+        _soloViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
+        _user1ViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
+        _user2ViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
     }
+    
+    let mockDataContainer: MockDataContainer
+    let aiClassic: AI?
+    let aiUser1: AI?
+    let aiUser2: AI?
+    let summaryModeIsComparison: Bool
+    let onToggleComparison: (Bool) -> Void
+    let requestLoadClassic: () -> Void
+    let requestLoadUserAIs: () -> Void
+    
+    @StateObject private var soloViewModel = HomepageSummaryViewModel()
+    @StateObject private var user1ViewModel = HomepageSummaryViewModel()
+    @StateObject private var user2ViewModel = HomepageSummaryViewModel()
 
     var body: some View {
         let currentLoading =
-            showUserPrefComparison
+            summaryModeIsComparison
             ? ((user1ViewModel.chatViewModel?.ai.isLoading ?? false) ||
                (user2ViewModel.chatViewModel?.ai.isLoading ?? false))
             : (soloViewModel.chatViewModel?.ai.isLoading ?? false)
 
         let currentProgress: Double =
-            showUserPrefComparison
+            summaryModeIsComparison
             ? max(user1ViewModel.chatViewModel?.ai.downloadProgress ?? 0,
                   user2ViewModel.chatViewModel?.ai.downloadProgress ?? 0)
             : (soloViewModel.chatViewModel?.ai.downloadProgress ?? 0)
 
         NavigationStack {
             VStack(spacing: 20) {
-                Toggle(isOn: $showUserPrefComparison) {
+                Toggle(isOn: Binding(
+                    get: { summaryModeIsComparison },
+                    set: { newValue in
+                        onToggleComparison(newValue)
+                        if newValue { requestLoadUserAIs() }
+                        else { requestLoadClassic() }
+                    }
+                )) {
                     Label("Add User Preferences", systemImage: "person.2.crop.square.stack")
                 }
                 .toggleStyle(SwitchToggleStyle(tint: .purple))
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 
-                if showUserPrefComparison {
-                    HomepageSummaryComparisonView(
-                        user1ViewModel: user1ViewModel,
-                        user2ViewModel: user2ViewModel,
-                        aiUser1: aiUser1,
-                        aiUser2: aiUser2
-                    )
+                if summaryModeIsComparison {
+                    if let aiUser1 = aiUser1, let aiUser2 = aiUser2 {
+                        HomepageSummaryComparisonView(
+                            user1ViewModel: user1ViewModel,
+                            user2ViewModel: user2ViewModel,
+                            aiUser1: aiUser1,
+                            aiUser2: aiUser2
+                        )
+                    } else {
+                        ProgressView("Loading User Preference AIs...")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 } else {
-                    HomepageClassicSummaryView(
-                        soloViewModel: soloViewModel,
-                        ai: aiClassic
-                    )
+                    if let aiClassic = aiClassic {
+                        HomepageClassicSummaryView(
+                            soloViewModel: soloViewModel,
+                            ai: aiClassic
+                        )
+                    } else {
+                        ProgressView("Loading Classic AI...")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
             }
             .background(Color(red: 0.95, green: 0.95, blue: 0.97))
@@ -100,15 +116,45 @@ struct HomepageSummaryView: View {
                 }
             }
         }
+        .task(id: ObjectIdentifier(aiClassic as AnyObject)) {
+            if let ai = aiClassic {
+                print("[DEBUG] HomepageSummaryView: Assigning aiClassic to soloViewModel")
+                soloViewModel.setChatViewModel(
+                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil)
+                )
+            }
+        }
+        .task(id: ObjectIdentifier(aiUser1 as AnyObject)) {
+            if let ai = aiUser1 {
+                print("[DEBUG] HomepageSummaryView: Assigning aiUser1 to user1ViewModel")
+                user1ViewModel.setChatViewModel(
+                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref1)
+                )
+            }
+        }
+        .task(id: ObjectIdentifier(aiUser2 as AnyObject)) {
+            if let ai = aiUser2 {
+                print("[DEBUG] HomepageSummaryView: Assigning aiUser2 to user2ViewModel")
+                user2ViewModel.setChatViewModel(
+                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref2)
+                )
+            }
+        }
 #if !targetEnvironment(simulator)
-        .onChange(of: aiClassic.model, initial: true) { _, _ in
-            Task { await aiClassic.loadLLM() }
+        .onChange(of: aiClassic?.model, initial: false) { _, _ in
+            if let ai = aiClassic {
+                Task { await ai.loadLLM() }
+            }
         }
-        .onChange(of: aiUser1.model, initial: true) { _, _ in
-            Task { await aiUser1.loadLLM() }
+        .onChange(of: aiUser1?.model, initial: false) { _, _ in
+            if let ai = aiUser1 {
+                Task { await ai.loadLLM() }
+            }
         }
-        .onChange(of: aiUser2.model, initial: true) { _, _ in
-            Task { await aiUser2.loadLLM() }
+        .onChange(of: aiUser2?.model, initial: false) { _, _ in
+            if let ai = aiUser2 {
+                Task { await ai.loadLLM() }
+            }
         }
 #endif
     }
