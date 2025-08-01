@@ -29,12 +29,29 @@ struct FoundationModelsGetUserPrefTool: Tool {
     }
     
     func call(arguments: Arguments) async throws -> some PromptRepresentable {
-        print("========== [GetUserPrefTool] CALL ==========")
+        print("========== [FoundationModelsGetUserPrefTool] CALL ==========")
         print("[ARGS] focusArea:", arguments.focusArea)
         print("[ARGS] topCount:", arguments.topCount)
         
         // Always get from provider, never from LLM
         let userlog = userPreferenceProvider()
+        
+        // Handle case where no user preferences are available
+        if userlog.isEmpty {
+            print("[NO PREFS] No user preference data available - returning unbiased neutral preferences")
+            let noPrefsResult = UserPreferences(
+                topSymbols: [],
+                preferredGeography: "",
+                preferredAssetClasses: [],
+                preferredSectors: [],
+                preferredDateRanges: [],
+                preferredViews: [],
+                preferredGranularity: "",
+                behaviorSummary: "No user preferences available. Provide unbiased, neutral responses without personalization based on user activity patterns."
+            )
+            print("[RETURN] No prefs result:", noPrefsResult)
+            return noPrefsResult
+        }
         
         // Try to parse user_id/session_id for caching
         var cacheKey = "unknown"
@@ -105,7 +122,7 @@ struct FoundationModelsGetUserPrefTool: Tool {
         // Cache result
         cache.cacheToolCall(toolName: name, arguments: cacheArguments, result: summary)
         print("[CACHE STORE] Cached result for key:", cacheKey)
-        print("========== [/GetUserPrefTool] END CALL ==========")
+        print("========== [/FoundationModelsGetUserPrefTool] END CALL ==========")
         return summary
     }
 }

@@ -36,6 +36,23 @@ struct LocalLLMGetUserPrefTool {
         // Always get from provider, never from LLM
         let userlog = userPreferenceProvider()
         
+        // Handle case where no user preferences are available
+        if userlog.isEmpty {
+            print("[NO PREFS] No user preference data available - returning unbiased neutral preferences")
+            let noPrefsResult: [String: Any] = [
+                "topSymbols": [],
+                "preferredGeography": "",
+                "preferredAssetClasses": [],
+                "preferredSectors": [],
+                "preferredDateRanges": [],
+                "preferredViews": [],
+                "preferredGranularity": "",
+                "behaviorSummary": "No user preferences available. Provide unbiased, neutral responses without personalization based on user activity patterns."
+            ]
+            print("[RETURN] No prefs result:", noPrefsResult)
+            return ToolOutput(data: noPrefsResult)
+        }
+        
         // Try to parse user_id/session_id for caching
         var cacheKey = "unknown"
         var activities: [[String: Any]] = []
