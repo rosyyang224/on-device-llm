@@ -58,7 +58,7 @@ struct FoundationModelsGetPortfolioValTool: Tool {
         print("  endDate: \(arguments.endDate ?? "nil")")
         print("  index: \(arguments.index ?? "nil")")
         print("  summary: \(arguments.summary ?? "nil")")
-
+        
         // Create cache key from arguments
         let cacheArguments: [String: Any?] = [
             "startDate": arguments.startDate,
@@ -72,12 +72,12 @@ struct FoundationModelsGetPortfolioValTool: Tool {
             print("[GetPortfolioValTool] CACHE HIT - returning cached results")
             return cachedResults
         }
-
+        
         print("[GetPortfolioValTool] CACHE MISS - executing tool logic")
-
+        
         let all = portfolioValProvider()
         print("[GetPortfolioValTool] total portfolio values: \(all.count)")
-
+        
         let filtered = all.filter { pv in
             if let idx = effectiveFilter(arguments.index), !pv.indices.contains(where: { $0.localizedCaseInsensitiveContains(idx) }) {
                 return false
@@ -90,9 +90,9 @@ struct FoundationModelsGetPortfolioValTool: Tool {
             }
             return true
         }
-
+        
         print("[GetPortfolioValTool] filtered values count: \(filtered.count)")
-
+        
         if filtered.isEmpty {
             print("[GetPortfolioValTool] No portfolio values matched the filters.")
             let emptyResult = "No portfolio values found matching the specified filters."
@@ -101,14 +101,28 @@ struct FoundationModelsGetPortfolioValTool: Tool {
             cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: emptyResult)
             return emptyResult
         }
-
-        let processedResult = Compressor.processData(filtered, customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
-        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(processedResult)) tokens")
         
-        // Cache the processed result
-        cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: processedResult)
+        let result: String
+        if filtered.count == 1 {
+            // Single portfolio value
+            result = Compressor.processData(filtered[0], customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
+        } else {
+            // Multiple portfolio values - create a summary
+            result = """
+            Portfolio Summary (\(filtered.count) accounts):
+            
+            \(filtered.enumerated().map { index, portfolio in
+                "Account \(index + 1):\n\(Compressor.compressPortfolioValue(portfolio))"
+            }.joined(separator: "\n\n"))
+            """
+        }
         
-        return processedResult
+        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(result)) tokens")
+        
+        // Cache the result
+        cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
+        print("[GetPortfolioValTool] COMPRESSED OUTPUT:", result)
+        return result
     }
 }
 
