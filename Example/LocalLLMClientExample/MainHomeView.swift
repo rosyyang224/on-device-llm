@@ -2,11 +2,10 @@ import SwiftUI
 
 struct MainHomeView: View {
     private let mockDataContainer = loadMockDataContainer(from: mockData)!
-    let aiQuery: AI
-
     @State private var aiClassic: AI?
     @State private var aiUser1: AI?
     @State private var aiUser2: AI?
+    @State private var aiQuery: AI?
     @State private var summaryModeIsComparison: Bool = false
     @State private var selectedTab: Int = 0
 
@@ -35,18 +34,46 @@ struct MainHomeView: View {
                 }
                 .tag(1)
 
-            QueryView(ai: aiQuery)
-                .tabItem {
-                    Label("Query", systemImage: "questionmark.circle")
+            Group {
+                if let aiQuery = aiQuery {
+                    QueryView(ai: aiQuery)
+                } else {
+                    ProgressView("Loading Query AI...")
                 }
-                .tag(2)
+            }
+            .tabItem {
+                Label("Query", systemImage: "questionmark.circle")
+            }
+            .tag(2)
         }
         .onChange(of: selectedTab) { oldTab, newTab in
             if oldTab == 1 && newTab != 1 {
                 cleanupAllSummaryAIs()
             }
+            if newTab == 1 && !summaryModeIsComparison && aiClassic == nil {
+                loadClassicAI()
+            }
+            if oldTab == 2 && newTab != 2 {
+                if aiQuery != nil { print("[DEBUG] Dropping aiQuery instance.") }
+                aiQuery = nil
+            }
+            if oldTab != 2 && newTab == 2 && aiQuery == nil {
+                loadQueryAI()
+            }
+        }
+
+        .onAppear {
+            // On initial appearance, pre-load AI for selected tab if needed
+            if selectedTab == 1 && !summaryModeIsComparison && aiClassic == nil {
+                loadClassicAI()
+            }
+            if selectedTab == 2 && aiQuery == nil {
+                loadQueryAI()
+            }
         }
     }
+
+    // MARK: - AI Instance Management
 
     private func loadClassicAI() {
         guard aiClassic == nil else { return }
@@ -77,6 +104,13 @@ struct MainHomeView: View {
             aiUser1 = nil
             aiUser2 = nil
             await Task.yield()
+        }
+    }
+    private func loadQueryAI() {
+        guard aiQuery == nil else { return }
+        Task { @MainActor in
+            print("[DEBUG] Adding aiQuery instance.")
+            aiQuery = AI(mockData: mockData, userlogProvider: { "" })
         }
     }
     private func handleComparisonToggle(isComparison: Bool) {

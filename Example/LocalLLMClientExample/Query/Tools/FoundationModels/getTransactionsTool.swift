@@ -113,7 +113,7 @@ struct FoundationModelsGetTransactionsTool: Tool {
         
         // Cache the processed result
         cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: processedResult)
-        
+        print("[GetTransactionsTool] COMPRESSED OUTPUT:", processedResult)
         return processedResult
     }
 }

@@ -53,6 +53,8 @@ final class ChatViewModel {
                     response = try await foundationSession.send(currentInput.text)
                     generatingText = response
                     print("[sendMessage] FoundationModels reply:", response)
+                    foundationSession.debugTranscript()
+
                     ai.messages.append(.assistant(response))
                 } else {
                     for try await token in try await ai.ask(currentInput.text, attachments: currentInput.images) {

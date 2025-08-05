@@ -133,7 +133,7 @@ final class AI {
     }
     
     func resetMessages() {
-        messages = [.system("\(sysPrompt)")]
+        messages = [.system("\(summarySysPrompt)")]
     }
 
     func loadLLM() async {

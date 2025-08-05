@@ -48,6 +48,13 @@ func extractUserPreferences(activities: [[String: Any]], topCount: Int) -> UserP
     var viewPreferences: [String: Int] = [:]
     var dataGranularity: [String: Int] = [:]
     
+    var holdingsFocus = 0
+    var transactionsFocus = 0
+    var portfolioFocus = 0
+    var symbolDrillDowns = 0
+    var chartInteractions = 0
+    var detailViews = 0
+    
     for activityData in activities {
         let activity = ContextualActivity(from: activityData)
         
@@ -83,9 +90,36 @@ func extractUserPreferences(activities: [[String: Any]], topCount: Int) -> UserP
         // Track data granularity preference
         let granularity = activity.getDataGranularity()
         dataGranularity[granularity, default: 0] += 1
+        
+        let focusArea = activity.getPrimaryFocusArea()
+        switch focusArea {
+        case "holdings": holdingsFocus += activity.getEngagementWeight()
+        case "transactions": transactionsFocus += activity.getEngagementWeight()
+        case "portfolio": portfolioFocus += activity.getEngagementWeight()
+        default: break
+        }
+        
+        if activity.isSymbolDrillDown() { symbolDrillDowns += 1 }
+        if activity.isChartInteraction() { chartInteractions += 1 }
+        if activity.isDetailView() { detailViews += 1 }
     }
     
+    let (primaryFocus, focusIntensity, granularityLevel, specificInterests) =
+        analyzeFocusMetrics(
+            holdingsFocus: holdingsFocus,
+            transactionsFocus: transactionsFocus,
+            portfolioFocus: portfolioFocus,
+            symbolDrillDowns: symbolDrillDowns,
+            chartInteractions: chartInteractions,
+            detailViews: detailViews,
+            symbolEngagement: symbolEngagement
+        )
+    
     return UserPreferences(
+        primaryFocus: primaryFocus,
+        focusIntensity: focusIntensity,
+        granularityLevel: granularityLevel,
+        specificInterests: specificInterests,
         topSymbols: getTopItems(from: symbolEngagement, count: topCount),
         preferredGeography: geographicFocus.max(by: { $0.value < $1.value })?.key ?? "mixed",
         preferredAssetClasses: getTopItems(from: assetClassFocus, count: topCount),
@@ -93,14 +127,119 @@ func extractUserPreferences(activities: [[String: Any]], topCount: Int) -> UserP
         preferredDateRanges: getTopItems(from: dateRangePrefs, count: topCount),
         preferredViews: getTopItems(from: viewPreferences, count: topCount),
         preferredGranularity: dataGranularity.max(by: { $0.value < $1.value })?.key ?? "mixed",
-        behaviorSummary: generateBehaviorSummary(
-            symbols: symbolEngagement,
-            views: viewPreferences,
-            geography: geographicFocus,
-            assetClass: assetClassFocus,
-            sectors: sectorFocus
-        )
     )
+}
+
+// MARK: - Missing Helper Functions
+
+func analyzeFocusMetrics(
+    holdingsFocus: Int,
+    transactionsFocus: Int,
+    portfolioFocus: Int,
+    symbolDrillDowns: Int,
+    chartInteractions: Int,
+    detailViews: Int,
+    symbolEngagement: [String: Int]
+) -> (primaryFocus: String, focusIntensity: String, granularityLevel: String, specificInterests: [String]) {
+    
+    // Determine primary focus
+    let totalFocus = holdingsFocus + transactionsFocus + portfolioFocus
+    let primaryFocus: String
+    let focusIntensity: String
+    
+    if totalFocus == 0 {
+        primaryFocus = "general_browsing"
+        focusIntensity = "low"
+    } else {
+        let holdingsRatio = Double(holdingsFocus) / Double(totalFocus)
+        let transactionsRatio = Double(transactionsFocus) / Double(totalFocus)
+        let portfolioRatio = Double(portfolioFocus) / Double(totalFocus)
+        
+        if holdingsRatio > 0.5 {
+            primaryFocus = "holdings"
+        } else if transactionsRatio > 0.5 {
+            primaryFocus = "transactions"
+        } else if portfolioRatio > 0.5 {
+            primaryFocus = "portfolio"
+        } else {
+            primaryFocus = "mixed"
+        }
+        
+        // Determine intensity based on drill-downs and interactions
+        let granularityScore = symbolDrillDowns + chartInteractions + (detailViews / 2)
+        if granularityScore > 8 {
+            focusIntensity = "high"
+        } else if granularityScore > 3 {
+            focusIntensity = "medium"
+        } else {
+            focusIntensity = "low"
+        }
+    }
+    
+    // Determine granularity level
+    let granularityLevel: String
+    if symbolDrillDowns > 3 && detailViews > 2 {
+        granularityLevel = "symbol_level"
+    } else if symbolDrillDowns > 1 || chartInteractions > 2 {
+        granularityLevel = "category_level"
+    } else {
+        granularityLevel = "portfolio_level"
+    }
+    
+    // Generate specific interests based on focus
+    var specificInterests: [String] = []
+    let topSymbols = symbolEngagement.sorted { $0.value > $1.value }.prefix(3).map { $0.key }
+    
+    switch primaryFocus {
+    case "holdings":
+        specificInterests = Array(topSymbols.prefix(3)) + ["market_price_tracking", "performance_analysis"]
+    case "transactions":
+        specificInterests = ["buy_orders", "transaction_costs", "recent_activity"] + Array(topSymbols.prefix(2))
+    case "portfolio":
+        specificInterests = ["portfolio_performance", "allocation_analysis", "trend_tracking"]
+    default:
+        specificInterests = Array(topSymbols.prefix(2)) + ["general_overview"]
+    }
+    
+    return (primaryFocus, focusIntensity, granularityLevel, Array(specificInterests))
+}
+
+func generateEnhancedBehaviorSummary(
+    primaryFocus: String,
+    focusIntensity: String,
+    symbols: [String: Int],
+    views: [String: Int],
+    geography: [String: Int],
+    assetClass: [String: Int],
+    sectors: [String: Int]
+) -> String {
+    var summary: [String] = []
+    
+    // Enhanced primary focus with intensity
+    summary.append("Primary focus: \(primaryFocus) (\(focusIntensity) intensity)")
+    
+    // Geographic preference
+    if let topGeo = geography.max(by: { $0.value < $1.value })?.key {
+        summary.append("Geographic focus: \(topGeo)")
+    }
+    
+    // Asset class preference
+    if let topAsset = assetClass.max(by: { $0.value < $1.value })?.key {
+        summary.append("Asset preference: \(topAsset)")
+    }
+    
+    // Sector interest
+    if let topSector = sectors.max(by: { $0.value < $1.value })?.key {
+        summary.append("Sector interest: \(topSector)")
+    }
+    
+    // Most engaged symbols
+    let topSymbols = symbols.sorted { $0.value > $1.value }.prefix(3).map { $0.key }
+    if !topSymbols.isEmpty {
+        summary.append("Most analyzed: \(topSymbols.joined(separator: ", "))")
+    }
+    
+    return summary.joined(separator: ". ")
 }
 
 func getTopItems(from counts: [String: Int], count: Int) -> [String] {
@@ -145,6 +284,86 @@ func generateBehaviorSummary(
     }
     
     return summary.joined(separator: ". ")
+}
+
+// MARK: - ContextualActivity Extensions
+
+extension ContextualActivity {
+    func getPrimaryFocusArea() -> String {
+        // Analyze the activity to determine which area it focuses on
+        if let url = properties["url"] as? String {
+            if url.contains("/holdings") {
+                return "holdings"
+            }
+            if url.contains("/transactions") {
+                return "transactions"
+            }
+            if url.contains("/portfolio") {
+                return "portfolio"
+            }
+        }
+        
+        if let tab = properties["tab"] as? String {
+            switch tab {
+            case "holdings": return "holdings"
+            case "transactions": return "transactions"
+            case "portfolio": return "portfolio"
+            default: break
+            }
+        }
+        
+        if let rowType = properties["row_type"] as? String {
+            switch rowType {
+            case "holding": return "holdings"
+            case "transaction": return "transactions"
+            default: break
+            }
+        }
+        
+        return "general"
+    }
+    
+    func getEngagementWeight() -> Int {
+        // Return different weights based on activity type
+        switch event {
+        case "page_view": return 1
+        case "row_click": return 3
+        case "chart_interaction": return 2
+        case "filter_applied": return 1
+        case "search": return 2
+        case "export": return 2
+        case "tab_click": return 1
+        default: return 1
+        }
+    }
+    
+    func isSymbolDrillDown() -> Bool {
+        // Check if this activity involves drilling down into specific symbol details
+        if let url = properties["url"] as? String, url.contains("/details/") {
+            return true
+        }
+        
+        if event == "row_click" && properties["symbol"] != nil {
+            return true
+        }
+        
+        if event == "search" && properties["type"] as? String == "symbol_lookup" {
+            return true
+        }
+        
+        return false
+    }
+    
+    func isChartInteraction() -> Bool {
+        return event == "chart_interaction"
+    }
+    
+    func isDetailView() -> Bool {
+        if let url = properties["url"] as? String, url.contains("/details/") {
+            return true
+        }
+        return false
+    }
 }
 
 struct ContextualActivity {

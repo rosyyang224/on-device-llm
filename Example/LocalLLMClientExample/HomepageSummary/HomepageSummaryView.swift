@@ -21,7 +21,7 @@ struct HomepageSummaryView: View {
         self.onToggleComparison = onToggleComparison
         self.requestLoadClassic = requestLoadClassic
         self.requestLoadUserAIs = requestLoadUserAIs
-        // StateObjects must be initialized this way
+
         _soloViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
         _user1ViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
         _user2ViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
@@ -120,7 +120,7 @@ struct HomepageSummaryView: View {
             if let ai = aiClassic {
                 print("[DEBUG] HomepageSummaryView: Assigning aiClassic to soloViewModel")
                 soloViewModel.setChatViewModel(
-                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil)
+                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref1)
                 )
             }
         }

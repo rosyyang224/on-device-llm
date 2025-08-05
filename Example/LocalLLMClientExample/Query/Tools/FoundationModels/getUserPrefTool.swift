@@ -33,21 +33,23 @@ struct FoundationModelsGetUserPrefTool: Tool {
         print("[ARGS] focusArea:", arguments.focusArea)
         print("[ARGS] topCount:", arguments.topCount)
         
-        // Always get from provider, never from LLM
         let userlog = userPreferenceProvider()
         
         // Handle case where no user preferences are available
         if userlog.isEmpty {
             print("[NO PREFS] No user preference data available - returning unbiased neutral preferences")
             let noPrefsResult = UserPreferences(
+                primaryFocus: "general_browsing",
+                focusIntensity: "low",
+                granularityLevel: "portfolio_level",
+                specificInterests: [],
                 topSymbols: [],
                 preferredGeography: "",
                 preferredAssetClasses: [],
                 preferredSectors: [],
                 preferredDateRanges: [],
                 preferredViews: [],
-                preferredGranularity: "",
-                behaviorSummary: "No user preferences available. Provide unbiased, neutral responses without personalization based on user activity patterns."
+                preferredGranularity: "portfolio_level",
             )
             print("[RETURN] No prefs result:", noPrefsResult)
             return noPrefsResult
@@ -71,14 +73,17 @@ struct FoundationModelsGetUserPrefTool: Tool {
         } catch {
             print("[ERROR] Could not parse userlog for cache key/activities:", error)
             let errorResult = UserPreferences(
+                primaryFocus: "general_browsing",
+                focusIntensity: "low",
+                granularityLevel: "portfolio_level",
+                specificInterests: [],
                 topSymbols: [],
                 preferredGeography: "",
                 preferredAssetClasses: [],
                 preferredSectors: [],
                 preferredDateRanges: [],
                 preferredViews: [],
-                preferredGranularity: "",
-                behaviorSummary: "Invalid userlog format. Expected JSON with 'activities' array and 'user_id'."
+                preferredGranularity: "portfolio_level",
             )
             print("[RETURN] Error struct:", errorResult)
             return errorResult
@@ -106,23 +111,12 @@ struct FoundationModelsGetUserPrefTool: Tool {
         
         let preferences = extractUserPreferences(activities: activities, topCount: arguments.topCount)
         
-        let summary = UserPreferences(
-            topSymbols: preferences.topSymbols,
-            preferredGeography: preferences.preferredGeography,
-            preferredAssetClasses: preferences.preferredAssetClasses,
-            preferredSectors: preferences.preferredSectors,
-            preferredDateRanges: preferences.preferredDateRanges,
-            preferredViews: preferences.preferredViews,
-            preferredGranularity: preferences.preferredGranularity,
-            behaviorSummary: preferences.behaviorSummary
-        )
-        
-        print("[TOOL OUTPUT] Summary struct being cached/returned:\n", summary)
+        print("[TOOL OUTPUT] Summary struct being cached/returned:\n", preferences)
         
         // Cache result
-        cache.cacheToolCall(toolName: name, arguments: cacheArguments, result: summary)
+        cache.cacheToolCall(toolName: name, arguments: cacheArguments, result: preferences)
         print("[CACHE STORE] Cached result for key:", cacheKey)
         print("========== [/FoundationModelsGetUserPrefTool] END CALL ==========")
-        return summary
+        return preferences
     }
 }

@@ -116,7 +116,7 @@ struct FoundationModelsGetHoldingsTool: Tool {
         
         let processedResult = Compressor.processData(filtered, customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
         print("[GetHoldingsTool] Applied compression! original: \(filtered.count) holdings, compressed size: \(Compressor.estimateTokens(processedResult)) tokens")
-//        print("[GetHoldingsTool] COMPRESSED OUTPUT:", processedResult)
+        print("[GetHoldingsTool] COMPRESSED OUTPUT:", processedResult)
         cache.cacheToolCall(toolName: "GetHoldingsTool", arguments: cacheArguments, result: processedResult)
         
         return processedResult

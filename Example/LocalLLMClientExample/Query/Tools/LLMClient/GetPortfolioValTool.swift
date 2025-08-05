@@ -141,15 +141,18 @@ struct LocalLLMGetPortfolioValTool {
             return ToolOutput(data: result)
         }
         
-        let formattedOutput = Compressor.processData(filtered)
-        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
-        
-        let result: [String: Any] = [
-            "portfolio_values": filtered,
-            "formatted_output": formattedOutput
-        ]
+        let result: String
+        if filtered.count == 1 {
+            // Single portfolio value
+            result = Compressor.compressPortfolioValue(filtered[0])
+        } else {
+            // Multiple portfolio values - use the new array compression method
+            result = Compressor.compressPortfolioValues(filtered)
+        }
+        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(result)) tokens")
 
         cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)
-        return ToolOutput(data: result)
+        print("[GetPortfolioValTool] COMPRESSED OUTPUT:", result)
+        return ToolOutput(data: ["formatted_output": result])
     }
 }

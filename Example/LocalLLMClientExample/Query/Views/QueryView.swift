@@ -1,27 +1,28 @@
 import SwiftUI
 
 struct QueryView: View {
-    let ai: AI
+    let ai: AI?
     private let mockDataContainer = loadMockDataContainer(from: mockData)!
 
     @State private var showingCacheSettings = false
 
     var body: some View {
         NavigationStack {
-            ChatView(ai: ai, viewModel: ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil
-                )
-            )
-
-                .navigationTitle("Chat")
-                .toolbar {
-                    ToolbarItem(placement: .automatic) {
-                        Button {
-                            showingCacheSettings = true
-                        } label: {
-                            Label("Cache Settings", systemImage: "archivebox")
+            if let ai = ai {
+                ChatView(ai: ai, viewModel: ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil))
+                    .navigationTitle("Chat")
+                    .toolbar {
+                        ToolbarItem(placement: .automatic) {
+                            Button {
+                                showingCacheSettings = true
+                            } label: {
+                                Label("Cache Settings", systemImage: "archivebox")
+                            }
                         }
                     }
-                }
+            } else {
+                ProgressView("Loading Query AI...")
+            }
         }
         .sheet(isPresented: $showingCacheSettings) {
             CacheSettingsView()
@@ -29,15 +30,15 @@ struct QueryView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .disabled(ai.isLoading)
+        .disabled(ai?.isLoading ?? true)
         .overlay {
-            if ai.isLoading {
+            if ai?.isLoading ?? false {
                 ZStack {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
                     Group {
-                        if ai.downloadProgress < 1 {
-                            ProgressView("Downloading LLM...", value: ai.downloadProgress)
+                        if (ai?.downloadProgress ?? 0) < 1 {
+                            ProgressView("Downloading LLM...", value: ai?.downloadProgress ?? 0)
                         } else {
                             ProgressView("Loading LLM...")
                         }
@@ -49,9 +50,11 @@ struct QueryView: View {
             }
         }
 #if !targetEnvironment(simulator)
-        .onChange(of: ai.model, initial: true) { _, _ in
-            Task {
-                await ai.loadLLM()
+        .onChange(of: ai?.model, initial: true) { _, _ in
+            if let ai = ai {
+                Task {
+                    await ai.loadLLM()
+                }
             }
         }
 #endif

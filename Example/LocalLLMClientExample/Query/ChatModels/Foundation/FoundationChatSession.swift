@@ -4,7 +4,6 @@
 //
 //  Created by Rosemary Yang on 7/29/25.
 //  Enhanced by Assistant on 7/29/25.
-//
 
 import Foundation
 import FoundationModels
@@ -85,9 +84,9 @@ public final class FoundationChatSession {
         let tools: [any Tool] = [getHoldingsTool, getPortfolioValTool, getTransactionsTool, getUserPrefTool]
         self.session = LanguageModelSession(
             tools: tools,
-            instructions: instructions
+            instructions: summarySysPrompt
         )
-        estimatedContextSize = estimateTokenCount(String(describing: instructions))
+        estimatedContextSize = estimateTokenCount(String(describing: summarySysPrompt))
     }
 
     public func send(_ query: String) async throws -> String {
@@ -143,27 +142,27 @@ public final class FoundationChatSession {
         print("[PROMPT DEBUG] Estimated tool context: \(estimatedToolContext) chars")
         print("[PROMPT DEBUG] Total estimated: \(totalEstimatedChars) chars (\(totalEstimatedTokens) tokens)")
         print("[PROMPT DEBUG] Context utilization: \(Double(totalEstimatedTokens)/12000.0 * 100)%")
-        
+
         // Detailed conversation history breakdown
         print("[PROMPT DEBUG] Conversation turns breakdown:")
         for (index, turn) in conversationHistory.enumerated() {
             let turnLength = turn.query.count + turn.response.count
             print("  Turn \(index + 1): \(turnLength) chars (Q:\(turn.query.count) + R:\(turn.response.count))")
         }
-        
+
         print("[PROMPT DEBUG] About to send query to LanguageModelSession...")
-        
+
         if isFirstInteraction { isFirstInteraction = false }
-        
-        // Time the actual call and wrap in detailed error handling
+
         let startTime = Date()
-        
+
         do {
-            print("[PROMPT DEBUG] 🚀 Calling session.respond(to: \"\(query.prefix(50))...\")")
+            print("[PROMPT DEBUG] Calling session.respond(to: \"\(query.prefix(50))...\")")
             let result = try await session.respond(to: query)
+
             let duration = Date().timeIntervalSince(startTime)
             
-            print("[PROMPT DEBUG] ✅ Response received in \(duration)s")
+            print("[PROMPT DEBUG] Response received in \(duration)s")
             print("[PROMPT DEBUG] Response length: \(result.content.count) chars")
             print("========== PROMPT DEBUG END ==========")
             
@@ -172,7 +171,7 @@ public final class FoundationChatSession {
             
         } catch {
             let duration = Date().timeIntervalSince(startTime)
-            print("[PROMPT DEBUG] ❌ ERROR after \(duration)s: \(error)")
+            print("[PROMPT DEBUG] ERROR after \(duration)s: \(error)")
             print("[PROMPT DEBUG] Error type: \(type(of: error))")
             print("[PROMPT DEBUG] Error localized: \(error.localizedDescription)")
             
@@ -182,17 +181,17 @@ public final class FoundationChatSession {
             
             // Check if it's specifically a context window error
             if errorString.lowercased().contains("context") {
-                print("[PROMPT DEBUG] 🎯 CONTEXT ERROR DETECTED!")
+                print("[PROMPT DEBUG] CONTEXT ERROR DETECTED!")
                 print("[PROMPT DEBUG] This is where context limit was hit!")
                 print("[PROMPT DEBUG] Estimated context at failure: \(totalEstimatedTokens) tokens")
             }
             
             if errorString.lowercased().contains("window") {
-                print("[PROMPT DEBUG] 🎯 WINDOW SIZE ERROR DETECTED!")
+                print("[PROMPT DEBUG] WINDOW SIZE ERROR DETECTED!")
             }
             
             if errorString.lowercased().contains("token") {
-                print("[PROMPT DEBUG] 🎯 TOKEN ERROR DETECTED!")
+                print("[PROMPT DEBUG] TOKEN ERROR DETECTED!")
             }
             
             print("========== PROMPT DEBUG ERROR END ==========")
@@ -385,6 +384,24 @@ public final class FoundationChatSession {
         }
         print("========== CONTEXT STATE DEBUG END ==========")
     }
+    // Add this method to your FoundationChatSession class
+
+    public func debugTranscript() {
+        guard let session = session else {
+            print("No session available")
+            return
+        }
+        
+        print("========== TRANSCRIPT DEBUG ==========")
+        print("Total entries: \(session.transcript.count)")
+        
+        for (index, entry) in session.transcript.enumerated() {
+            print("[\(index)] \(String(describing: entry))")
+        }
+        
+        print("========== TRANSCRIPT DEBUG END ==========")
+    }
+
 }
 
 // MARK: - Supporting Types

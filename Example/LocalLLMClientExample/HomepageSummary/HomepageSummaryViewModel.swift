@@ -9,7 +9,7 @@ class HomepageSummaryViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private var generateTask: Task<Void, Never>?
-    public var chatViewModel: ChatViewModel?    // <-- made public
+    public var chatViewModel: ChatViewModel?
     private var initialMessageCount: Int = 0
     private var userPrefData: String?
     
@@ -77,6 +77,10 @@ class HomepageSummaryViewModel: ObservableObject {
     }
     
     private func buildPortfolioSummaryPrompt() -> String {
-        return "Generate a comprehensive portfolio summary."
+        let prompt =
+            """
+            Generate a comprehensive portfolio summary for ALL data. This is a homepage summary of ALL data. Focus analysis on trends, patterns, groupings, etc. Return sentences, not bullets.
+            """
+        return prompt
     }
 }

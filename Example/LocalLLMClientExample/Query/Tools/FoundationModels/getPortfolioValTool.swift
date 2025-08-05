@@ -105,16 +105,10 @@ struct FoundationModelsGetPortfolioValTool: Tool {
         let result: String
         if filtered.count == 1 {
             // Single portfolio value
-            result = Compressor.processData(filtered[0], customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
+            result = Compressor.compressPortfolioValue(filtered[0])
         } else {
-            // Multiple portfolio values - create a summary
-            result = """
-            Portfolio Summary (\(filtered.count) accounts):
-            
-            \(filtered.enumerated().map { index, portfolio in
-                "Account \(index + 1):\n\(Compressor.compressPortfolioValue(portfolio))"
-            }.joined(separator: "\n\n"))
-            """
+            // Multiple portfolio values
+            result = Compressor.compressPortfolioValues(filtered)
         }
         
         print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(result)) tokens")

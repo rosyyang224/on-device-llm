@@ -40,13 +40,17 @@ struct LocalLLMGetUserPrefTool {
         if userlog.isEmpty {
             print("[NO PREFS] No user preference data available - returning unbiased neutral preferences")
             let noPrefsResult: [String: Any] = [
+                "primaryFocus": "general_browsing",
+                "focusIntensity": "low",
+                "granularityLevel": "portfolio_level",
+                "specificInterests": [],
                 "topSymbols": [],
                 "preferredGeography": "",
                 "preferredAssetClasses": [],
                 "preferredSectors": [],
                 "preferredDateRanges": [],
                 "preferredViews": [],
-                "preferredGranularity": "",
+                "preferredGranularity": "portfolio_level",
                 "behaviorSummary": "No user preferences available. Provide unbiased, neutral responses without personalization based on user activity patterns."
             ]
             print("[RETURN] No prefs result:", noPrefsResult)
@@ -71,13 +75,17 @@ struct LocalLLMGetUserPrefTool {
         } catch {
             print("[ERROR] Could not parse userlog for cache key/activities:", error)
             let errorResult: [String: Any] = [
+                "primaryFocus": "general_browsing",
+                "focusIntensity": "low",
+                "granularityLevel": "portfolio_level",
+                "specificInterests": [],
                 "topSymbols": [],
                 "preferredGeography": "",
                 "preferredAssetClasses": [],
                 "preferredSectors": [],
                 "preferredDateRanges": [],
                 "preferredViews": [],
-                "preferredGranularity": "",
+                "preferredGranularity": "portfolio_level",
                 "behaviorSummary": "Invalid userlog format. Expected JSON with 'activities' array and 'user_id'."
             ]
             print("[RETURN] Error result:", errorResult)
@@ -107,6 +115,10 @@ struct LocalLLMGetUserPrefTool {
         let preferences = extractUserPreferences(activities: activities, topCount: arguments.topCount)
         
         let summary: [String: Any] = [
+            "primaryFocus": preferences.primaryFocus,
+            "focusIntensity": preferences.focusIntensity,
+            "granularityLevel": preferences.granularityLevel,
+            "specificInterests": preferences.specificInterests,
             "topSymbols": preferences.topSymbols,
             "preferredGeography": preferences.preferredGeography,
             "preferredAssetClasses": preferences.preferredAssetClasses,
@@ -114,7 +126,6 @@ struct LocalLLMGetUserPrefTool {
             "preferredDateRanges": preferences.preferredDateRanges,
             "preferredViews": preferences.preferredViews,
             "preferredGranularity": preferences.preferredGranularity,
-            "behaviorSummary": preferences.behaviorSummary
         ]
         
         print("[TOOL OUTPUT] Summary being cached/returned:\n", summary)

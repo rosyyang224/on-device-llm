@@ -220,6 +220,72 @@ extension Compressor {
         Indices: \(portfolio.indices.joined(separator: ", "))
         """
     }
+    
+    /// Compress an array of portfolio values (time series data) with trend analysis
+    static func compressPortfolioValues(_ portfolios: [PortfolioValue]) -> String {
+        guard !portfolios.isEmpty else { return "No portfolio values found." }
+        
+        if portfolios.count == 1 {
+            return compressPortfolioValue(portfolios[0])
+        }
+        
+        let sortedByDate = portfolios.sorted { $0.valueDate < $1.valueDate }
+        let values = sortedByDate.map { $0.marketValue }
+        
+        // Basic stats
+        let current = values.last ?? 0
+        let start = values.first ?? 0
+        let peak = values.max() ?? 0
+        let trough = values.min() ?? 0
+        let totalGrowth = current - start
+        let growthPercent = start > 0 ? (totalGrowth / start) * 100 : 0
+        
+        // Volatility calculation
+        var returns: [Double] = []
+        if values.count > 1 {
+            for i in 1..<values.count {
+                let previous = values[i-1]
+                let current = values[i]
+                if previous > 0 {
+                    let returnPct = ((current - previous) / previous) * 100
+                    returns.append(returnPct)
+                }
+            }
+        }
+        
+        let volatility: Double
+        if returns.count > 1 {
+            let avgReturn = returns.reduce(0, +) / Double(returns.count)
+            let variance = returns.reduce(0) { sum, ret in sum + pow(ret - avgReturn, 2) } / Double(returns.count)
+            volatility = sqrt(variance)
+        } else {
+            volatility = 0
+        }
+        
+        // Recent trend (last 3 periods)
+        let recentPeriods = min(3, values.count)
+        let recentValues = Array(values.suffix(recentPeriods))
+        let recentTrend = recentValues.count > 1 ?
+            ((recentValues.last! - recentValues.first!) / recentValues.first!) * 100 : 0
+        
+        // Drawdown
+        let drawdown = peak > 0 ? ((current - peak) / peak) * 100 : 0
+        
+        // Visual indicators
+        let volatilityLevel = volatility > 3 ? "High" : volatility > 1 ? "Med" : "Low"
+        
+        // Format values array compactly
+        let valuesString = values.map { String(format: "%.0f", $0) }.joined(separator: ", ")
+        
+        return """
+        Portfolio (\(portfolios.count) periods: \(sortedByDate.first?.valueDate ?? "") → \(sortedByDate.last?.valueDate ?? "")):
+        Value: $\(String(format: "%.0f", current)) | Growth: $\(String(format: "%.0f", totalGrowth)) (\(String(format: "%.1f", growthPercent))%)
+        Range: $\(String(format: "%.0f", trough)) - $\(String(format: "%.0f", peak)) | Drawdown: \(String(format: "%.1f", drawdown))%
+        Volatility: \(String(format: "%.1f", volatility))% (\(volatilityLevel)) | Recent: \(String(format: "%.1f", recentTrend))%
+        YTD: \(String(format: "%.2f", sortedByDate.last?.yearToDateRateOfReturnCumulative ?? 0))% | ARR: \(String(format: "%.1f", sortedByDate.last?.netARR ?? 0))%
+        Values: [\(valuesString)]
+        """
+    }
 }
 
 // MARK: - Generic Compression for Unknown Data Types
