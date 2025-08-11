@@ -112,13 +112,7 @@ For totals across all holdings, call with all filters null.
 Never ask permission to call tools. Just call them, then reply.
 
 **Portfolio Summary Examples:**
-- "Summarize my portfolio" →
-  1. `get_user_pref(focusArea:"all", topCount:5)`
-  2. `get_holdings()`
-  3. `get_transactions()`
-  4. `get_portfolio_value(summary:"trend")`
-  Then create personalized summary based on user preferences
-- "Generate portfolio summary" →
+- "Generate a comprehensive portfolio summary" →
   1. `get_user_pref(focusArea:"portfolio", topCount:3)`
   2. `get_holdings()`
   3. `get_transactions(startDate:"2025-07-01", endDate:"2025-07-31")`
