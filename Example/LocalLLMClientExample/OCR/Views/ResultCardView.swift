@@ -3,39 +3,28 @@ import SwiftUI
 struct ResultCardView: View {
     let title: String
     let subtitle: String?
-    let iconName: String
-    let color: Color
-
+    let icon: String
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                Image(systemName: iconName)
-                    .foregroundColor(color)
-                    .font(.system(size: 18, weight: .semibold))
-            }
+        HStack(spacing: AppTheme.Spacing.m) {
+            Image(systemName: icon)
+                .pillIcon(color: AppTheme.green)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(AppTheme.subtitleFont)
-                    .foregroundColor(AppTheme.titleText)
-                if let subtitle = subtitle {
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.onSurface)
+                    .contentTransition(.opacity)
+                if let subtitle {
                     Text(subtitle)
-                        .font(AppTheme.captionFont)
-                        .foregroundColor(AppTheme.secondaryText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.opacity)
                 }
             }
-
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppTheme.cardBackground)
-                .shadow(color: AppTheme.cardShadowColor, radius: 6, x: 0, y: 3)
-        )
-        .padding(.horizontal)
+        .padding(AppTheme.Spacing.l)
+        .card()
+        .padding(.horizontal, AppTheme.Spacing.l)
     }
 }

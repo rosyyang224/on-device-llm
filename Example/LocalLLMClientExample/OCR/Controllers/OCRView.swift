@@ -1,10 +1,14 @@
 import SwiftUI
 import PhotosUI
 import Vision
+import CoreGraphics
+import ImageIO
 
 struct OCRView: View {
-    @State private var showingImagePicker = false
+    // Image as raw bytes (no UIKit / NSImage)
+    @State private var imageData: Data? = nil
     @State private var selectedItem: PhotosPickerItem? = nil
+
     @State private var selectedCGImage: CGImage? = nil
     @State private var navigateToResult = false
     @State private var errorMessage: String?
@@ -12,51 +16,47 @@ struct OCRView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 32) {
-                    HomeHeaderView()
+                VStack(spacing: AppTheme.Spacing.xl) {
+                    // Hero header (gradient or you can pass an Image(...) later)
+                    HomeHeaderView(
+                        title: "Passport OCR",
+                        subtitle: "Scan a photo and extract key fields instantly.",
+                        image: nil
+                    )
 
-                    HomeMainCardView {
-                        showingImagePicker = true
-                    }
+                    // Branded illustration panel
+                    PassportIllustration()
 
-                    HomeQuickActionsView {
-                        print("View History tapped")
-                    }
-
-                    if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 40)
-            }
-            .background(AppTheme.backgroundColor.ignoresSafeArea())
-            .photosPicker(isPresented: $showingImagePicker, selection: $selectedItem, matching: .images)
-            .onChange(of: selectedItem) { oldItem, newItem in
-                Task {
-                    do {
-                        if let data = try await newItem?.loadTransferable(type: Data.self),
-                           let ciImage = CIImage(data: data) {
-                            let context = CIContext()
-                            if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
-                                selectedCGImage = cgImage
-                                navigateToResult = true
-                            } else {
-                                errorMessage = "Failed to convert image."
+                    // Cross‑platform image picker (uses PhotosPicker under the hood)
+                    ImagePicker(imageData: $imageData)
+                        .onChange(of: imageData) { _ in
+                            // Convert to CGImage when imageData arrives
+                            if let data = imageData, let cg = CGImageDecoder.cgImage(from: data) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                    selectedCGImage = cg
+                                    navigateToResult = true
+                                }
+                            } else if imageData != nil {
+                                errorMessage = "Unable to decode the selected image."
                             }
-                        } else {
-                            errorMessage = "Invalid image data."
                         }
-                    } catch {
-                        errorMessage = "Image load error: \(error.localizedDescription)"
+
+                    if let errorMessage {
+                        ResultCardView(
+                            title: "Image Error",
+                            subtitle: errorMessage,
+                            icon: "exclamationmark.triangle.fill"
+                        )
+                        .transition(.opacity)
                     }
                 }
+                .padding(.bottom, AppTheme.Spacing.xxl)
             }
+            .background(AppTheme.background.ignoresSafeArea())
             .navigationDestination(isPresented: $navigateToResult) {
                 if let image = selectedCGImage {
                     DocumentResultView(image: image)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
         }

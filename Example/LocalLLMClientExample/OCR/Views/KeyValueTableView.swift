@@ -1,71 +1,49 @@
 import SwiftUI
 
 struct KeyValueTableView: View {
-    @Binding var keyValuePairs: [RecognizedKeyValue]
-    var onValueChanged: ((Int, String) -> Void)?
+    var title: String = "Extracted Details"
+    var pairs: [KeyValuePair]
+    var onTapRow: ((KeyValuePair) -> Void)?
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(keyValuePairs.indices, id: \.self) { index in
-                rowView(for: index)
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.s) {
+            Text(title).sectionHeader()
+
+            LazyVStack(spacing: AppTheme.Spacing.xs) {
+                ForEach(pairs) { pair in
+                    Button {
+                        onTapRow?(pair)
+                    } label: {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(pair.key)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 120, alignment: .leading)
+                            Text(pair.value)
+                                .font(.body)
+                                .foregroundStyle(AppTheme.onSurface)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, AppTheme.Spacing.m)
+                        .padding(.horizontal, AppTheme.Spacing.m)
+                        .background(.thinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.m, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
+            .padding(.horizontal, AppTheme.Spacing.l)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-        )
-        .padding()
-    }
-
-    @ViewBuilder
-    private func rowView(for index: Int) -> some View {
-        let bindingValue = Binding<String>(
-            get: { keyValuePairs[index].value ?? "" },
-            set: { newValue in
-                keyValuePairs[index].value = newValue
-                onValueChanged?(index, newValue)
-            }
-        )
-
-        KeyValueTableRowView(
-            key: keyValuePairs[index].key,
-            value: bindingValue
-        )
-        .background(index % 2 == 0 ? Color.secondary.opacity(0.05) : .clear)
+        .padding(.top, AppTheme.Spacing.m)
     }
 }
 
-struct KeyValueTableRowView: View {
+struct KeyValuePair: Identifiable, Hashable {
+    let id = UUID()
     let key: String
-    @Binding var value: String
-
-    var body: some View {
-        HStack(alignment: .top) {
-            Text(key)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-                .frame(width: 120, alignment: .leading)
-
-            TextField("Enter value", text: $value)
-                .textFieldStyle(.roundedBorder)
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 8)
-    }
-}
-
-#Preview {
-    struct PreviewWrapper: View {
-        @State private var pairs: [RecognizedKeyValue] = [
-            RecognizedKeyValue(key: "Name", value: "Alice"),
-            RecognizedKeyValue(key: "Passport", value: "X1234567"),
-        ]
-
-        var body: some View {
-            KeyValueTableView(keyValuePairs: $pairs)
-        }
-    }
-
-    return PreviewWrapper()
+    let value: String
 }

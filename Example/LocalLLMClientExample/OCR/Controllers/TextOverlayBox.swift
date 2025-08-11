@@ -12,17 +12,30 @@ struct TextOverlayBox: View {
                 let text = obs.topCandidates(1).first?.string ?? ""
 
                 ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.yellow.opacity(0.8), lineWidth: 2)
-                        .background(Color.clear)
+                    // Soft, readable highlight
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.yellow.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.yellow.opacity(0.85), lineWidth: 1.5)
+                        )
                         .frame(width: rect.width, height: rect.height)
                         .position(x: rect.midX, y: rect.midY)
+                        .transition(.opacity)
 
-                    Text(text)
-                        .font(.system(size: 6))
-                        .foregroundColor(.red)
-                        .position(x: rect.minX + 4, y: rect.minY + 6) // Adjust padding if needed
-                        .frame(maxWidth: rect.width - 4, alignment: .leading)
+                    // Tiny label to aid debugging/QA
+                    if !text.isEmpty {
+                        Text(text)
+                            .font(.system(size: 7, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.black.opacity(0.9))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                            .position(x: rect.minX + 6, y: rect.minY + 8)
+                            .frame(maxWidth: rect.width - 8, alignment: .leading)
+                            .transition(.opacity)
+                    }
                 }
             }
         }

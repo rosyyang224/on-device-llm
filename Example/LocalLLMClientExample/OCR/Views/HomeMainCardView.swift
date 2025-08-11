@@ -1,117 +1,55 @@
 import SwiftUI
 
 struct HomeMainCardView: View {
-    var onScanTapped: () -> Void
-    @State private var isDragOver = false
-    @State private var pulseAnimation = false
-    
+    let title: String
+    let subtitle: String?
+    let icon: String
+    let actionTitle: String
+    let action: (() -> Void)?
+
+    @State private var hovering = false
+
     var body: some View {
-        VStack(spacing: 28) {
-            // Enhanced passport illustration area with drag-and-drop styling
-            ZStack {
-                // Background with subtle gradient
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                AppTheme.lightGray,
-                                AppTheme.mediumGray.opacity(0.3)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(height: 220)
-                    .overlay(
-                        // Dashed border for drag-and-drop indication
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(
-                                isDragOver ? AppTheme.primaryColor : AppTheme.mediumGray,
-                                style: StrokeStyle(lineWidth: 2, dash: [8, 4])
-                            )
-                            .opacity(isDragOver ? 1.0 : 0.6)
-                            .animation(AppTheme.defaultAnimation, value: isDragOver)
-                    )
-                
-                VStack(spacing: 16) {
-                    // Enhanced passport icon
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(AppTheme.primaryColor)
-                            .frame(width: 80, height: 100)
-                            .shadow(color: AppTheme.primaryBlue.opacity(0.3), radius: 6, x: 0, y: 3)
-                        
-                        VStack(spacing: 4) {
-                            Circle()
-                                .fill(AppTheme.primaryColor.opacity(0.3))
-                                .frame(width: 20, height: 20)
-                            
-                            Text("PASSPORT")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                        }
+        Button(action: { action?() }) {
+            HStack(spacing: AppTheme.Spacing.m) {
+                Image(systemName: icon)
+                    .pillIcon(color: AppTheme.primaryBlue)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(AppTheme.TypeScale.title2)
+                        .foregroundStyle(AppTheme.onSurface)
+                        .contentTransition(.opacity)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(AppTheme.TypeScale.body)
+                            .foregroundStyle(.secondary)
+                            .contentTransition(.opacity)
                     }
-                    .scaleEffect(pulseAnimation ? 1.05 : 1.0)
-                    .animation(
-                        Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true),
-                        value: pulseAnimation
-                    )
-                    
-                    // File type indicators
-                    HStack(spacing: 12) {
-                        ForEach(["JPG", "PNG", "PDF"], id: \.self) { fileType in
-                            Text(fileType)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(AppTheme.secondaryText)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.8))
-                                )
-                        }
-                    }
+                    Text(actionTitle)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.primaryBlue)
+                        .padding(.top, 4)
                 }
+
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .onAppear {
-                pulseAnimation = true
-            }
-            .onDrop(of: ["public.image"], isTargeted: $isDragOver) { providers in
-                // Handle file drop
-                return true
-            }
-            
-            // Enhanced description text
-            VStack(spacing: 8) {
-                Text("Scan or upload your passport")
-                    .font(AppTheme.subtitleFont)
-                    .foregroundColor(AppTheme.primaryText)
-                    .multilineTextAlignment(.center)
-                
-                Text("Information will be extracted automatically")
-                    .font(AppTheme.bodyFont)
-                    .foregroundColor(AppTheme.secondaryText)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 24)
-            
-            // Enhanced primary button with better styling
-            Button(action: onScanTapped) {
-                HStack(spacing: 8) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 18, weight: .medium))
-                    Text("Scan Passport")
-                        .font(AppTheme.subtitleFont)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-            }
-            .modifier(AppTheme.primaryButtonStyle())
-            .padding(.horizontal, 24)
+            .padding(AppTheme.Spacing.l)
+            .background(.thinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 0.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous))
+            .shadow(color: AppTheme.cardShadowColor, radius: hovering ? 18 : 12, x: 0, y: hovering ? 10 : 6)
+            .scaleEffect(hovering ? 1.01 : 1.0)
         }
-        .padding(.vertical, 32)
-        .background(Color.white)
-        .modifier(AppTheme.cardStyle())
-        .padding(.horizontal, 20)
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .defaultAnimate(value: hovering)
+        .padding(.horizontal, AppTheme.Spacing.l)
     }
 }

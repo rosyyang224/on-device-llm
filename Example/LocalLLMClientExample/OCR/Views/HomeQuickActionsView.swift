@@ -1,63 +1,56 @@
 import SwiftUI
 
 struct HomeQuickActionsView: View {
-    var onRecentScansTapped: () -> Void
-    var onHelpTapped: (() -> Void)?
-    var onSettingsTapped: (() -> Void)?
-    
+    let actions: [QuickAction]
+    var onTap: ((QuickAction) -> Void)?
+
     var body: some View {
-        VStack(spacing: 16) {
-            // Main recent scans button
-            Button(action: onRecentScansTapped) {
-                HStack {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(AppTheme.primaryColor)
-                    
-                    Text("Recent Scans")
-                        .font(AppTheme.subtitleFont)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(AppTheme.secondaryText)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-            }
-            .modifier(AppTheme.secondaryButtonStyle())
-            
-            // Additional quick action buttons
-            HStack(spacing: 12) {
-                // Help button
-                Button(action: onHelpTapped ?? {}) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "questionmark.circle")
-                            .font(.system(size: 16, weight: .medium))
-                        Text("Help")
-                            .font(AppTheme.bodyFont)
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.s) {
+            Text("Quick Actions").sectionHeader()
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: AppTheme.Spacing.m) {
+                    ForEach(actions) { action in
+                        Button {
+                            onTap?(action)
+                        } label: {
+                            HStack(spacing: AppTheme.Spacing.s) {
+                                Image(systemName: action.icon)
+                                    .pillIcon(color: action.tint)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(action.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(AppTheme.onSurface)
+                                    if let note = action.subtitle {
+                                        Text(note)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, AppTheme.Spacing.m)
+                            .padding(.horizontal, AppTheme.Spacing.m)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.m, style: .continuous))
+                            .shadow(color: action.tint.opacity(0.15), radius: 10, x: 0, y: 6)
+                            .contentTransition(.opacity)
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
                 }
-                .modifier(AppTheme.secondaryButtonStyle())
-                
-                // Settings button
-                Button(action: onSettingsTapped ?? {}) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "gear")
-                            .font(.system(size: 16, weight: .medium))
-                        Text("Settings")
-                            .font(AppTheme.bodyFont)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                }
-                .modifier(AppTheme.secondaryButtonStyle())
+                .padding(.horizontal, AppTheme.Spacing.l)
+                .padding(.bottom, AppTheme.Spacing.s)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
+        .padding(.top, AppTheme.Spacing.m)
     }
+}
+
+struct QuickAction: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let subtitle: String?
+    let icon: String
+    let tint: Color
 }

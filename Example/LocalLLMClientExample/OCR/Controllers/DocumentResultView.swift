@@ -6,88 +6,125 @@ struct DocumentResultView: View {
 
     @State private var isImageVisible: Bool = true
     @State private var keyValuePairs: [RecognizedKeyValue] = []
-    @State private var detectedDocumentType: String = "Processing..."
+    @State private var detectedDocumentType: String = "Processing…"
     @Environment(\.dismiss) private var dismiss
+
+    @State private var appear = false
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: AppTheme.Spacing.l) {
+
+                // Image preview with overlay boxes (toggleable)
                 if isImageVisible {
                     ZStack {
                         GeometryReader { geo in
-                            Image(decorative: image, scale: 1.0)
+                            Image(decorative: image, scale: 1.0, orientation: .up)
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: geo.size.width)
                                 .clipped()
                                 .overlay(
-                                    TextOverlayBox(observations: keyValuePairs.compactMap { $0.keyTextObservation })
+                                    TextOverlayBox(
+                                        observations: keyValuePairs.compactMap { $0.keyTextObservation }
+                                    )
                                 )
                         }
-                        .frame(height: 240)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: AppTheme.cardShadowColor, radius: 8, x: 0, y: 4)
+                        .frame(height: 260)
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous)
+                            .strokeBorder(.white.opacity(0.6), lineWidth: 0.5)
+                    )
+                    .card()
+                    .transition(.opacity.combined(with: .scale))
                 }
 
+                // Detected doc type card
                 ResultCardView(
                     title: "Detected Document",
                     subtitle: detectedDocumentType,
-                    iconName: "doc.text.magnifyingglass",
-                    color: AppTheme.accentColor
+                    icon: "doc.text.magnifyingglass"
                 )
 
+                // Extracted fields list
                 if !keyValuePairs.isEmpty {
-                    KeyValueTableView(
-                        keyValuePairs: $keyValuePairs,
-                        onValueChanged: { index, newValue in
-                            keyValuePairs[index].value = newValue
-                        }
-                    )
-                    .padding(.top, 8)
-                }
-                
-                Button(action: saveToJSON) {
-                    Text("Save")
-                }
-                .modifier(AppTheme.primaryButtonStyle())
+                    Text("Extracted Details").sectionHeader()
 
+                    let displayPairs: [KeyValuePair] = keyValuePairs.map {
+                        KeyValuePair(key: $0.key, value: $0.value ?? "")
+                    }
 
-                ScanAgainButton(title: "Scan Another") {
-                    dismiss()
+                    KeyValueTableView(pairs: displayPairs) { pair in
+                        // Row tap: you could present a detail editor if desired.
+                        print("Tapped \(pair.key)")
+                    }
+                    .defaultAnimate(value: keyValuePairs.count)
                 }
 
+                // Actions row
+                HStack(spacing: AppTheme.Spacing.m) {
+                    Button {
+                        saveToJSON()
+                    } label: {
+                        Label("Save", systemImage: "tray.and.arrow.down.fill")
+                            .font(.headline)
+                            .padding(.horizontal, AppTheme.Spacing.xl)
+                            .padding(.vertical, AppTheme.Spacing.s)
+                            .background(AppTheme.primaryButtonColor)
+                            .foregroundStyle(AppTheme.primaryButtonTextColor)
+                            .clipShape(Capsule())
+                            .shadow(color: AppTheme.primaryBlue.opacity(0.25), radius: 8, x: 0, y: 6)
+                    }
+                    .buttonStyle(.plain)
+
+                    ScanAgainButton(title: "Scan Another") {
+                        dismiss()
+                    }
+                }
+                .padding(.top, AppTheme.Spacing.s)
+
+                // Show/Hide overlay toggle
                 Button(isImageVisible ? "Hide Image" : "Show Image") {
-                    withAnimation { isImageVisible.toggle() }
+                    withAnimation(.easeInOut(duration: 0.25)) { isImageVisible.toggle() }
                 }
-                .font(AppTheme.captionFont)
-                .foregroundColor(AppTheme.accentColor)
-                .padding(.top, 4)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.primaryBlue)
+                .padding(.top, AppTheme.Spacing.xs)
             }
-            .padding()
+            .padding(.horizontal, AppTheme.Spacing.l)
+            .padding(.top, AppTheme.Spacing.l)
+            .opacity(appear ? 1 : 0)
+            .offset(y: appear ? 0 : 8)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.35)) { appear = true }
+                runFullOCR(on: image)
+            }
         }
-        .background(AppTheme.backgroundColor.ignoresSafeArea())
-        .onAppear {
-            runFullOCR(on: image)
-        }
-    }
-    
-    private func saveToJSON() {
-        var idCardDict: [String: String] = [:]
+        .background(AppTheme.background.ignoresSafeArea())
+        .navigationTitle("Results")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
 
+    }
+
+    private func saveToJSON() {
+        var dict: [String: String] = [:]
         for pair in keyValuePairs {
             if let value = pair.value {
-                idCardDict[pair.key] = value
+                dict[pair.key] = value
             }
         }
 
         do {
-            let jsonData = try JSONSerialization.data(withJSONObject: idCardDict, options: .prettyPrinted)
+            let jsonData = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
             if let jsonString = String(data: jsonData, encoding: .utf8) {
-                print("Saved ID Card JSON:\n\(jsonString)")
+                print("Saved ID JSON:\n\(jsonString)")
             }
         } catch {
-            print("Error encoding ID card to JSON: \(error)")
+            print("Error encoding to JSON: \(error)")
         }
     }
 
@@ -104,7 +141,7 @@ struct DocumentResultView: View {
         rectangleRequest.minimumAspectRatio = 0.5
         rectangleRequest.maximumAspectRatio = 1.0
 
-        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .right, options: [:])
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
         DispatchQueue.global(qos: .userInitiated).async {
             try? handler.perform([rectangleRequest])
         }
@@ -146,8 +183,10 @@ struct DocumentResultView: View {
             }
 
             DispatchQueue.main.async {
-                self.keyValuePairs = extractedPairs
-                self.detectedDocumentType = docType
+                withAnimation(.snappy(duration: 0.28)) {
+                    self.keyValuePairs = extractedPairs
+                    self.detectedDocumentType = docType
+                }
             }
         }
 
@@ -155,7 +194,7 @@ struct DocumentResultView: View {
         request.recognitionLanguages = ["cs_CZ", "en_GB"]
         request.regionOfInterest = regionOfInterest ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
-        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .right, options: [:])
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
         DispatchQueue.global(qos: .userInitiated).async {
             try? handler.perform([request])
         }

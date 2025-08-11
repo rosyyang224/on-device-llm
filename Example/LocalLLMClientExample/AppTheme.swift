@@ -1,165 +1,153 @@
 import SwiftUI
 
 struct AppTheme {
-    // MARK: - Enhanced Color Palette
-    static let primaryBlue = Color(red: 0.0, green: 0.48, blue: 0.8)
-    static let lightBlue = Color(red: 0.2, green: 0.6, blue: 0.9)
-    static let darkBlue = Color(red: 0.0, green: 0.32, blue: 0.64)
+    // MARK: - Spacing
+    struct Spacing {
+        static let xxs: CGFloat = 4
+        static let xs:  CGFloat = 8
+        static let s:   CGFloat = 12
+        static let m:   CGFloat = 16
+        static let l:   CGFloat = 20
+        static let xl:  CGFloat = 24
+        static let xxl: CGFloat = 32
+    }
+
+    // MARK: - Radii
+    struct Radius {
+        static let s: CGFloat = 10
+        static let m: CGFloat = 16
+        static let l: CGFloat = 20
+        static let xl: CGFloat = 28
+        static let pill: CGFloat = 999
+    }
+
+    // MARK: - Typography
+    struct TypeScale {
+        static let titleLarge: Font = .system(.largeTitle, design: .rounded).weight(.bold)
+        static let title:      Font = .system(.title, design: .rounded).weight(.bold)
+        static let title2:     Font = .system(.title2, design: .rounded).weight(.semibold)
+        static let section:    Font = .system(size: 18, weight: .semibold, design: .rounded)
+        static let body:       Font = .system(size: 16, weight: .regular, design: .rounded)
+        static let caption:    Font = .system(size: 13, weight: .regular, design: .rounded)
+        static let badge:      Font = .system(size: 12, weight: .semibold, design: .rounded)
+    }
+
+    // MARK: - Colors
+    static let primaryBlue   = Color(red: 0.20, green: 0.47, blue: 0.96)
+    static let blueDark      = Color(red: 0.14, green: 0.36, blue: 0.78)
+    static let blueLight     = Color(red: 0.78, green: 0.87, blue: 1.00)
+
+    static let purple        = Color(red: 0.49, green: 0.39, blue: 0.98)
+    static let green         = Color(red: 0.21, green: 0.75, blue: 0.46)
+    static let orange        = Color(red: 0.99, green: 0.57, blue: 0.21)
+
+    // Neutral palette (no UIKit/AppKit)
+    static let lightGray     = Color(.sRGB, red: 0.95, green: 0.96, blue: 0.98, opacity: 1.0)
+    static let mediumGray    = Color(.sRGB, red: 0.75, green: 0.78, blue: 0.82, opacity: 1.0)
+    static let primaryGray   = Color(.sRGB, red: 0.55, green: 0.58, blue: 0.62, opacity: 1.0)
+
+    // Surfaces
+    static let background    = Color(.sRGB, red: 0.97, green: 0.98, blue: 1.00, opacity: 1.0) // subtle blue-tinted background
+    static let surface       = Color(.sRGB, red: 1.00, green: 1.00, blue: 1.00, opacity: 0.92)
+    static let onSurface     = Color.primary
     
-    // Added gradient colors for more modern look
-    static let primaryGradient = LinearGradient(
-        gradient: Gradient(colors: [primaryBlue, lightBlue]),
-        startPoint: .leading,
-        endPoint: .trailing
+    static let cardShadowColor = Color.black.opacity(0.10)
+
+
+    // MARK: - Gradients
+    static let heroGradient = LinearGradient(
+        colors: [blueLight.opacity(0.55), primaryBlue.opacity(0.35)],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
-    static let primaryGray = Color(red: 0.2, green: 0.2, blue: 0.2)
-    static let secondaryGray = Color(red: 0.4, green: 0.4, blue: 0.4)
-    static let lightGray = Color(red: 0.95, green: 0.95, blue: 0.95)
-    static let mediumGray = Color(red: 0.9, green: 0.9, blue: 0.9)
-    
-    // Enhanced background colors
-    static let backgroundColor = Color(red: 0.98, green: 0.98, blue: 0.98) // Slightly off-white
-    static let cardShadowColor = Color.black.opacity(0.08)
-    
-    static let successGreen = Color(red: 0.2, green: 0.7, blue: 0.3)
-    static let warningOrange = Color(red: 1.0, green: 0.6, blue: 0.0)
-    static let errorRed = Color(red: 0.9, green: 0.2, blue: 0.2)
-    
-    // MARK: - Semantic Assignments
-    static let primaryColor = primaryBlue
-    static let secondaryColor = primaryGray
-    static let cardBackground = lightGray
-    static let accentColor = lightBlue
-    
-    static let primaryText = primaryGray
-    static let secondaryText = secondaryGray
-    static let titleText = darkBlue
-    
-    static let highConfidenceColor = successGreen
-    static let mediumConfidenceColor = warningOrange
-    static let lowConfidenceColor = errorRed
-    
-    // MARK: - Enhanced Typography
-    static let largeTitle = Font.system(size: 32, weight: .bold, design: .rounded)
-    static let titleFont = Font.system(size: 24, weight: .bold, design: .rounded)
-    static let subtitleFont = Font.system(size: 18, weight: .semibold, design: .rounded)
-    static let bodyFont = Font.system(size: 16, weight: .medium)
-    static let captionFont = Font.system(size: 14, weight: .medium)
-    static let smallFont = Font.system(size: 12, weight: .medium)
-    
-    // MARK: - Animation Constants
-    static let defaultAnimation = Animation.easeInOut(duration: 0.3)
-    static let springAnimation = Animation.spring(response: 0.5, dampingFraction: 0.8)
-    static let buttonPressAnimation = Animation.easeInOut(duration: 0.1)
-    
-    // MARK: - SwiftUI Style Helpers
-    static func textFieldStyle(isEditable: Bool = true) -> some ViewModifier {
-        ModifiedTextFieldStyle(isEditable: isEditable)
-    }
-    
-    static func primaryButtonStyle() -> some ViewModifier {
-        PrimaryButtonStyle()
-    }
-    
-    static func secondaryButtonStyle() -> some ViewModifier {
-        SecondaryButtonStyle()
-    }
-    
-    static func cardStyle() -> some ViewModifier {
-        CardViewStyle()
-    }
-    
-    static func confidenceColor(for confidence: Float) -> Color {
-        switch confidence {
-        case 0.8...1.0:
-            return highConfidenceColor
-        case 0.5..<0.8:
-            return mediumConfidenceColor
-        default:
-            return lowConfidenceColor
-        }
+
+    static func capsuleGradient(_ base: Color) -> LinearGradient {
+        .linearGradient(
+            Gradient(colors: [base, base.opacity(0.8)]),
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        )
     }
 }
 
-// MARK: - Enhanced ViewModifiers
-
-private struct ModifiedTextFieldStyle: ViewModifier {
-    let isEditable: Bool
-    
+// MARK: - Reusable Modifiers
+struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .font(AppTheme.bodyFont)
-            .padding(14)
-            .background(isEditable ? Color.white : AppTheme.cardBackground)
-            .foregroundColor(isEditable ? AppTheme.primaryText : AppTheme.secondaryText)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isEditable ? AppTheme.primaryColor : AppTheme.mediumGray, lineWidth: 1.5)
-            )
-            .cornerRadius(12)
-    }
-}
-
-private struct PrimaryButtonStyle: ViewModifier {
-    @State private var isPressed = false
-    
-    func body(content: Content) -> some View {
-        content
-            .font(AppTheme.subtitleFont)
-            .padding(.vertical, 16)
-            .padding(.horizontal, 24)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(AppTheme.primaryGradient)
-                    .shadow(color: AppTheme.primaryBlue.opacity(0.4), radius: 8, x: 0, y: 4)
-            )
-            .foregroundColor(Color.white)
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(AppTheme.buttonPressAnimation, value: isPressed)
-            .onTapGesture {
-                // Handle tap feedback
-            }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in isPressed = true }
-                    .onEnded { _ in isPressed = false }
-            )
-    }
-}
-
-private struct SecondaryButtonStyle: ViewModifier {
-    @State private var isPressed = false
-    
-    func body(content: Content) -> some View {
-        content
-            .font(AppTheme.subtitleFont)
-            .padding(.vertical, 16)
-            .padding(.horizontal, 24)
-            .frame(maxWidth: .infinity)
-            .background(AppTheme.lightGray)
-            .foregroundColor(AppTheme.primaryText)
-            .cornerRadius(16)
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(AppTheme.buttonPressAnimation, value: isPressed)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in isPressed = true }
-                    .onEnded { _ in isPressed = false }
-            )
-    }
-}
-
-private struct CardViewStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .background(Color.white)
-            .cornerRadius(20)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous))
             .shadow(color: AppTheme.cardShadowColor, radius: 12, x: 0, y: 6)
     }
 }
 
-// MARK: - Color Aliases for Button Styles
+struct PillIconModifier: ViewModifier {
+    let color: Color
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 44, height: 44)
+            .background(
+                Circle().fill(
+                    RadialGradient(
+                        colors: [color, color.opacity(0.7)],
+                        center: .center, startRadius: 5, endRadius: 40
+                    )
+                )
+            )
+            .shadow(color: color.opacity(0.35), radius: 10, x: 0, y: 6)
+    }
+}
+
+struct SectionHeaderModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(AppTheme.TypeScale.section)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, AppTheme.Spacing.l)
+            .padding(.top, AppTheme.Spacing.m)
+    }
+}
+
+struct HeaderBackground: View {
+    let image: Image?
+    var body: some View {
+        ZStack {
+            if let image {
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .overlay(
+                        LinearGradient(colors: [.black.opacity(0.35), .clear],
+                                       startPoint: .top, endPoint: .center)
+                    )
+                    .clipped()
+                    .ignoresSafeArea()
+                    .transition(.opacity.combined(with: .scale(scale: 1.05)))
+            } else {
+                AppTheme.heroGradient
+                    .ignoresSafeArea()
+            }
+        }
+    }
+}
+
+// MARK: - View helpers
+extension View {
+    func card() -> some View { modifier(CardModifier()) }
+    func pillIcon(color: Color) -> some View { modifier(PillIconModifier(color: color)) }
+    func sectionHeader() -> some View { modifier(SectionHeaderModifier()) }
+
+    // Inclusive, gentle animations matching the sample app style
+    func defaultAnimate<V: Equatable>(value: V) -> some View {
+        if #available(iOS 17.0, *) {
+            return self.animation(.snappy(duration: 0.28), value: value)
+        } else {
+            return self.animation(.easeInOut(duration: 0.28), value: value)
+        }
+    }
+}
+
+// MARK: - Button Color Aliases
 extension AppTheme {
     static let primaryButtonColor = primaryBlue
     static let primaryButtonTextColor = Color.white

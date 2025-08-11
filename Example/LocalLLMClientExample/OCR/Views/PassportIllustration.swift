@@ -1,32 +1,32 @@
 //
 //  PassportIllustration.swift
-//  airbank-ocr-demo
 //
-//  Created by Rosemary Yang on 7/3/25.
-//  Copyright © 2025 Marek Přidal. All rights reserved.
-//
-
 
 import SwiftUI
 
 struct PassportIllustration: View {
     var body: some View {
         ZStack {
-            VStack {
-                Spacer()
-                Text("PASSPORT")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.bottom, 20)
-            }
-            .frame(width: 200, height: 140)
-            .background(AppTheme.darkBlue)
-            .cornerRadius(8)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous)
+                .fill(AppTheme.capsuleGradient(AppTheme.primaryBlue))
+                .frame(height: 140)
+                .shadow(color: AppTheme.primaryBlue.opacity(0.25), radius: 12, x: 0, y: 8)
 
-            Circle()
-                .fill(Color.white.opacity(0.3))
-                .frame(width: 40, height: 40)
-                .offset(y: -30)
+            HStack(spacing: 16) {
+                Image(systemName: "rectangle.and.text.magnifyingglass")
+                    .pillIcon(color: AppTheme.green)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Passport OCR")
+                        .font(AppTheme.TypeScale.title2)
+                        .foregroundStyle(.white)
+                    Text("Import a photo to extract MRZ & fields")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, AppTheme.Spacing.l)
         }
+        .padding(.horizontal, AppTheme.Spacing.l)
     }
 }
