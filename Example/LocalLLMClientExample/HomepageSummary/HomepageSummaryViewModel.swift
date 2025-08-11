@@ -9,7 +9,7 @@ class HomepageSummaryViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private var generateTask: Task<Void, Never>?
-    public var chatViewModel: ChatViewModel?    // <-- made public
+    public var chatViewModel: ChatViewModel?
     private var initialMessageCount: Int = 0
     private var userPrefData: String?
     
@@ -32,6 +32,11 @@ class HomepageSummaryViewModel: ObservableObject {
         
         generateTask = Task {
             initialMessageCount = chatViewModel.messages.count
+            
+            // Load model on-demand if needed (non-foundation models)
+            if chatViewModel.ai.model != .foundation && !chatViewModel.ai.isModelLoaded {
+                await chatViewModel.ai.loadLLM()
+            }
             
             chatViewModel.inputText = buildPortfolioSummaryPrompt()
             chatViewModel.sendMessage()

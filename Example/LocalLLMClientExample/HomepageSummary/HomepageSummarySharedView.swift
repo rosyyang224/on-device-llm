@@ -30,32 +30,26 @@ struct HomepageAIPipelineSelector: View {
     let ai: AI
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("AI Pipeline")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 12) {
-                PipelineToggleButton(
-                    title: "Foundation",
-                    isSelected: ai.model == .foundation,
-                    action: { ai.model = .foundation }
-                )
-                PipelineToggleButton(
-                    title: "MLX",
-                    isSelected: ai.model.isMLX && ai.model != .foundation,
-                    action: { ai.model = .qwen3_4b }
-                )
-                PipelineToggleButton(
-                    title: "Llama.cpp",
-                    isSelected: !ai.model.isMLX && ai.model != .foundation,
-                    action: { ai.model = .gemma3_4b }
-                )
-            }
+        HStack(spacing: AppTheme.Spacing.s) {
+            PipelineToggleButton(
+                title: "Foundation",
+                isSelected: ai.model == .foundation,
+                action: { ai.model = .foundation }
+            )
+            PipelineToggleButton(
+                title: "MLX",
+                isSelected: ai.model.isMLX && ai.model != .foundation,
+                action: { ai.model = .qwen3_4b }
+            )
+            PipelineToggleButton(
+                title: "Llama.cpp",
+                isSelected: !ai.model.isMLX && ai.model != .foundation,
+                action: { ai.model = .gemma3_4b }
+            )
         }
-        .padding(.horizontal, 20)
     }
 }
+
 
 struct HomepageEmptySummaryPanel: View {
     var body: some View {
