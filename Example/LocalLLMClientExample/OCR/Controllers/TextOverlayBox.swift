@@ -33,7 +33,7 @@ struct TextOverlayBox: View {
                             .background(.ultraThinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                             .position(x: rect.minX + 6, y: rect.minY + 8)
-                            .frame(maxWidth: rect.width - 8, alignment: .leading)
+                            .frame(maxWidth: max(0, rect.width - 8), alignment: .leading)
                             .transition(.opacity)
                     }
                 }

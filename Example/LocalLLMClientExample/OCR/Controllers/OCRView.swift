@@ -17,26 +17,23 @@ struct OCRView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: AppTheme.Spacing.xl) {
-                    // Hero header (gradient or you can pass an Image(...) later)
                     HomeHeaderView(
                         title: "Passport OCR",
                         subtitle: "Scan a photo and extract key fields instantly.",
                         image: nil
                     )
 
-                    // Branded illustration panel
                     PassportIllustration()
 
-                    // Cross‑platform image picker (uses PhotosPicker under the hood)
                     ImagePicker(imageData: $imageData)
-                        .onChange(of: imageData) { _ in
+                        .onChange(of: imageData) { oldValue, newValue in
                             // Convert to CGImage when imageData arrives
-                            if let data = imageData, let cg = CGImageDecoder.cgImage(from: data) {
+                            if let data = newValue, let cg = CGImageDecoder.cgImage(from: data) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                                     selectedCGImage = cg
                                     navigateToResult = true
                                 }
-                            } else if imageData != nil {
+                            } else if newValue != nil {
                                 errorMessage = "Unable to decode the selected image."
                             }
                         }

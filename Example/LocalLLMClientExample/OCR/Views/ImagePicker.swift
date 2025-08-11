@@ -67,9 +67,9 @@ struct ImagePicker: View {
 
         // Hidden PhotosPicker, toggled programmatically
         .photosPicker(isPresented: $showPhotosPicker, selection: $selectedItem, matching: .images)
-        .onChange(of: selectedItem) { _ in
+        .onChange(of: selectedItem) { oldValue, newValue in
             Task {
-                if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
+                if let data = try? await newValue?.loadTransferable(type: Data.self) {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                         imageData = data
                     }
