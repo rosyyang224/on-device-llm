@@ -1,18 +1,20 @@
 import SwiftUI
 import PhotosUI
-import CoreGraphics
 import ImageIO
+import CoreGraphics
 
 struct ImagePicker: View {
-    /// Raw image bytes so we avoid UIImage/NSImage and work on iOS + macOS.
     @Binding var imageData: Data?
 
     @State private var selectedItem: PhotosPickerItem?
+    @State private var showSourceChooser = false
+    @State private var showCameraSheet = false   // iOS only
+    @State private var showPhotosPicker = false
     @Namespace private var ns
 
     var body: some View {
         VStack(spacing: AppTheme.Spacing.m) {
-            if let imageData, let cg = CGImageDecoder.cgImage(from: imageData) {
+            if let data = imageData, let cg = CGImageDecoder.cgImage(from: data) {
                 Image(decorative: cg, scale: 1, orientation: .up)
                     .resizable()
                     .scaledToFit()
@@ -34,7 +36,7 @@ struct ImagePicker: View {
                             .pillIcon(color: AppTheme.primaryBlue)
                         Text("Add a passport photo")
                             .font(AppTheme.TypeScale.title2)
-                        Text("Import from Photos or take a new picture.")
+                        Text("Take a photo or choose from your library.")
                             .font(AppTheme.TypeScale.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -49,35 +51,66 @@ struct ImagePicker: View {
                 .transition(.opacity)
             }
 
-            PhotosPicker(selection: $selectedItem, matching: .images) {
-                Label(imageData == nil ? "Choose Photo" : "Replace Photo",
-                      systemImage: "photo.on.rectangle")
+            Button {
+                showSourceChooser = true
+            } label: {
+                Label("Add Photo", systemImage: "plus")
                     .padding(.horizontal, AppTheme.Spacing.l)
                     .padding(.vertical, AppTheme.Spacing.s)
                     .background(AppTheme.primaryButtonColor)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
             }
-            .onChange(of: selectedItem) { _ in
-                Task {
-                    if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            imageData = data
-                        }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, AppTheme.Spacing.l)
+
+        // Hidden PhotosPicker, toggled programmatically
+        .photosPicker(isPresented: $showPhotosPicker, selection: $selectedItem, matching: .images)
+        .onChange(of: selectedItem) { _ in
+            Task {
+                if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        imageData = data
                     }
                 }
             }
         }
-        .padding(.horizontal, AppTheme.Spacing.l)
+
+        // One dialog -> choose Camera (iOS) or Photos
+        .confirmationDialog("Add Photo", isPresented: $showSourceChooser, titleVisibility: .visible) {
+            #if os(iOS)
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Take Photo") { showCameraSheet = true }
+            }
+            #endif
+            Button("Choose from Photos") { showPhotosPicker = true }
+            Button("Cancel", role: .cancel) {}
+        }
+
+        // Present system camera UI (iOS only)
+        #if os(iOS)
+        .sheet(isPresented: $showCameraSheet) {
+            SystemCameraView { data in
+                if let data {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        imageData = data
+                    }
+                }
+                showCameraSheet = false
+            }
+            .ignoresSafeArea()
+        }
+        #endif
     }
 }
 
-/// Minimal Data -> CGImage decoder using ImageIO (cross-platform).
+// Minimal Data -> CGImage decoder (cross-platform)
 enum CGImageDecoder {
     static func cgImage(from data: Data) -> CGImage? {
         let cfData = data as CFData
-        guard let source = CGImageSourceCreateWithData(cfData, nil) else { return nil }
-        return CGImageSourceCreateImageAtIndex(source, 0, [
+        guard let src = CGImageSourceCreateWithData(cfData, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(src, 0, [
             kCGImageSourceShouldCache: true as CFBoolean,
             kCGImageSourceShouldAllowFloat: true as CFBoolean
         ] as CFDictionary)
