@@ -16,18 +16,28 @@ struct OCRView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: AppTheme.Spacing.xl) {
-                    HomeHeaderView(
-                        title: "Passport OCR",
-                        subtitle: "Scan a photo and extract key fields instantly.",
-                        image: nil
-                    )
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
 
+                    // Hero Illustration
                     PassportIllustration()
+                        .padding(.top, AppTheme.Spacing.m)
 
+                    // Context text
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.s) {
+                        Text("Upload an ID")
+                            .font(.title2.weight(.semibold))
+                            .foregroundColor(.primary)
+
+                        Text("Add a clear photo of your passport, national ID, or driver’s license to automatically extract and fill in form fields.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, AppTheme.Spacing.l)
+
+                    // Upload Card
                     ImagePicker(imageData: $imageData)
-                        .onChange(of: imageData) { oldValue, newValue in
-                            // Convert to CGImage when imageData arrives
+                        .onChange(of: imageData) { _, newValue in
                             if let data = newValue, let cg = CGImageDecoder.cgImage(from: data) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
                                     selectedCGImage = cg
@@ -38,18 +48,23 @@ struct OCRView: View {
                             }
                         }
 
+                    // Error State
                     if let errorMessage {
                         ResultCardView(
                             title: "Image Error",
                             subtitle: errorMessage,
                             icon: "exclamationmark.triangle.fill"
                         )
+                        .padding(.horizontal, AppTheme.Spacing.l)
                         .transition(.opacity)
                     }
+
+                    Spacer(minLength: AppTheme.Spacing.xxl)
                 }
                 .padding(.bottom, AppTheme.Spacing.xxl)
             }
             .background(AppTheme.background.ignoresSafeArea())
+            .navigationTitle("Easy Form")
             .navigationDestination(isPresented: $navigateToResult) {
                 if let image = selectedCGImage {
                     DocumentResultView(image: image)
