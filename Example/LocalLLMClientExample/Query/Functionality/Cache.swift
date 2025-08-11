@@ -155,4 +155,21 @@ final class Cache {
             return stats
         }
     }
+    
+    // MARK: - Introspection (read-only listings)
+
+    func getToolEntries() -> [(key: String, value: Any)] {
+        queue.sync {
+            toolCallCache.map { ($0.key, $0.value) }
+                .sorted { $0.key < $1.key }
+        }
+    }
+
+    func getContextEntries() -> [(key: String, value: Any)] {
+        queue.sync {
+            contextCache.map { ($0.key, $0.value) }
+                .sorted { $0.key < $1.key }
+        }
+    }
+
 }
