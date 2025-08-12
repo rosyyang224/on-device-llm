@@ -100,7 +100,7 @@ struct ChatBubbleView: View {
             }
             .scaleEffect(x: isUser ? -1 : 1)
 
-            Text(message.content)
+            MarkdownChatText(text: message.content)
                 .padding(12)
                 .background(isUser ? Color.accentColor : .gray.opacity(0.2))
                 .foregroundColor(isUser ? .white : .primary)
