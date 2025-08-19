@@ -4,11 +4,17 @@ struct MarkdownChatText: View {
     let text: String
 
     var body: some View {
-        // No hardcoded horizontal alignment here.
-        // Your ChatBubbleView controls left/right placement.
         VStack(spacing: AppTheme.Spacing.s) {
             ForEach(parseBlocks(from: text), id: \.id) { block in
                 switch block.kind {
+                case .heading(let level, let t):
+                    Text(attributed(t))
+                        .font(fontForHeading(level))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, level == 1 ? AppTheme.Spacing.s : 0)
+
                 case .code(let code):
                     CodeBlockView(code: code)
 
@@ -48,15 +54,34 @@ struct MarkdownChatText: View {
     // MARK: - Markdown helpers
 
     private func attributed(_ s: String) -> AttributedString {
-        // Inline markdown (bold/italic/links/headings inline) parsed natively
+        // Inline markdown (bold/italic/links/inline-code) parsed natively
         (try? AttributedString(
             markdown: s,
             options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         )) ?? AttributedString(s)
     }
 
+    private func fontForHeading(_ level: Int) -> Font {
+        switch level {
+        case 1: return AppTheme.TypeScale.title       // larger than title2
+        case 2: return AppTheme.TypeScale.title2
+        case 3: return .system(size: 16, weight: .semibold, design: .rounded)
+        default: return .system(size: 15, weight: .semibold, design: .rounded)
+        }
+    }
+
+    private func headingLevel(_ trimmed: String) -> Int? {
+        // Matches "# Title", "## Title", ... up to "###### Title"
+        guard trimmed.first == "#" else { return nil }
+        let count = trimmed.prefix { $0 == "#" }.count
+        guard (1...6).contains(count) else { return nil }
+        // Require a space after the hashes (CommonMark-ish)
+        guard trimmed.dropFirst(count).first == " " else { return nil }
+        return count
+    }
+
     private func parseBlocks(from input: String) -> [Block] {
-        // Split code fences first, then split paragraphs into lists/paragraphs
+        // Split code fences first, detect headings, then split paragraphs into lists/paragraphs
         var blocks: [Block] = []
         var inCode = false
         var codeBuffer: [String] = []
@@ -93,12 +118,22 @@ struct MarkdownChatText: View {
 
             if inCode {
                 codeBuffer.append(line)
+                continue
+            }
+
+            // Headings (H1–H6) — treat as their own blocks
+            if let level = headingLevel(t) {
+                flushParagraph()
+                let text = String(t.drop { $0 == "#" || $0 == " " })
+                blocks.append(.init(kind: .heading(level: level, text: text)))
+                continue
+            }
+
+            // Blank line ends paragraph
+            if t.isEmpty {
+                flushParagraph()
             } else {
-                if t.isEmpty {
-                    flushParagraph()
-                } else {
-                    paragraphBuffer.append(line + "\n")
-                }
+                paragraphBuffer.append(line + "\n")
             }
         }
 
@@ -133,7 +168,6 @@ struct MarkdownChatText: View {
             // match "N. " prefix
             let t = $0.trimmingCharacters(in: .whitespaces)
             guard let dot = t.firstIndex(of: ".") else { return false }
-            // ensure everything before '.' is digits and next char is space
             let before = t[..<dot]
             let afterDotIndex = t.index(after: dot)
             let hasSpace = afterDotIndex < t.endIndex ? t[afterDotIndex] == " " : false
@@ -159,7 +193,10 @@ struct MarkdownChatText: View {
 
     struct Block: Identifiable {
         let id = UUID()
-        enum Kind { case paragraph(String), list([String]), numberedList([String]), code(String) }
+        enum Kind {
+            case heading(level: Int, text: String)
+            case paragraph(String), list([String]), numberedList([String]), code(String)
+        }
         let kind: Kind
     }
 }

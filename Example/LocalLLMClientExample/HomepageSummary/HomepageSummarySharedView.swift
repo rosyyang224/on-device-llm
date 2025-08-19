@@ -90,10 +90,8 @@ struct HomepageSummaryPanel: View {
                     .foregroundColor(color)
                     .cornerRadius(8)
             }
-            Text(summary)
-                .font(.body)
-                .foregroundColor(.primary)
-                .lineSpacing(4)
+            MarkdownChatText(text: summary)
+                .font(AppTheme.TypeScale.body)
         }
         .padding(20)
         .background(Color.gray.opacity(0.1))
@@ -155,10 +153,8 @@ struct UserSummaryPanel: View {
                                     .foregroundColor(color)
                                     .cornerRadius(4)
                             }
-                            Text(summary)
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                                .lineSpacing(2)
+                            MarkdownChatText(text: summary)
+                                .font(AppTheme.TypeScale.body)
                         }
                         .padding(12)
                         .background(Color.gray.opacity(0.05))
