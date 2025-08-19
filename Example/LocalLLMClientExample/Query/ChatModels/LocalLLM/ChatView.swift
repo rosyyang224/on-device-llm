@@ -9,7 +9,11 @@ struct ChatView: View {
 
     var body: some View {
         VStack {
-            MessageList(messages: viewModel.messages)
+
+            MessageList(
+                messages: viewModel.messages,
+                isGenerating: viewModel.isGenerating
+            )
 
             BottomBar(
                 ai: ai,
@@ -34,9 +38,7 @@ struct ChatView: View {
                     Divider()
 
                     Button {
-                        Task {
-                            await ai.toggleTools()
-                        }
+                        Task { await ai.toggleTools() }
                     } label: {
                         HStack {
                             Text("Tools calling")
@@ -56,8 +58,10 @@ struct ChatView: View {
         }
     }
 }
+
 struct MessageList: View {
     let messages: [LLMInput.Message]
+    let isGenerating: Bool
 
     @State private var position = ScrollPosition(idType: LLMInput.Message.ID.self)
 
@@ -68,12 +72,24 @@ struct MessageList: View {
                     ChatBubbleView(message: message)
                         .id(message.id)
                 }
+
+                if isGenerating {
+                    HStack {
+                        TypingBubbleView()
+                        Spacer(minLength: 40)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading) // assistant-side
+                    .padding(.horizontal)
+                }
             }
             .scrollTargetLayout()
             .padding(.horizontal)
         }
         .scrollPosition($position)
         .onChange(of: messages) { _, _ in
+            position.scrollTo(edge: .bottom)
+        }
+        .onChange(of: isGenerating) { _, _ in
             position.scrollTo(edge: .bottom)
         }
     }
@@ -86,20 +102,23 @@ struct ChatBubbleView: View {
         let isUser = message.role == .user
 
         VStack(alignment: isUser ? .trailing : .leading) {
-            LazyVGrid(columns: [.init(.adaptive(minimum: 100))], alignment: .leading) {
-                ForEach(message.attachments) { attachment in
-                    switch attachment.content {
-                    case let .image(image):
-                        Image(llm: image)
-                            .resizable()
-                            .scaledToFit()
-                            .cornerRadius(16)
+            if !message.attachments.isEmpty {
+                LazyVGrid(columns: [.init(.adaptive(minimum: 100))], alignment: .leading) {
+                    ForEach(message.attachments) { attachment in
+                        switch attachment.content {
+                        case let .image(image):
+                            Image(llm: image)
+                                .resizable()
+                                .scaledToFit()
+                                .cornerRadius(16)
+                        }
                     }
+                    .scaleEffect(x: isUser ? -1 : 1)
                 }
                 .scaleEffect(x: isUser ? -1 : 1)
             }
-            .scaleEffect(x: isUser ? -1 : 1)
 
+            // Markdown bubble
             MarkdownChatText(text: message.content)
                 .padding(12)
                 .background(isUser ? Color.accentColor : .gray.opacity(0.2))

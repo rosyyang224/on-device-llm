@@ -121,19 +121,16 @@ final class AI {
     var areToolsEnabled = false
 
     private var session: LLMSession?
+    var messages: [LLMInput.Message] = []
+    var isModelLoaded: Bool { session != nil }
     
     init(mockData: String, userlogProvider: @escaping @Sendable () -> String = { "" }) {
         let container = loadMockDataContainer(from: mockData) ?? MockDataContainer()
         self.tools = makeLLMTools(container: container, userlogProvider: userlogProvider)
     }
 
-    var messages: [LLMInput.Message] {
-        get { session?.messages ?? [] }
-        set { session?.messages = newValue }
-    }
-    
     func resetMessages() {
-        messages = [.system("\(sysPrompt)")]
+        messages = [.system(sysPrompt)]
     }
 
     func loadLLM() async {
@@ -164,7 +161,8 @@ final class AI {
             }
 
             session = LLMSession(model: downloadModel, tools: areToolsEnabled ? tools : [])
-            resetMessages()
+            session?.messages = messages
+            if messages.isEmpty { resetMessages() }
         } catch {
             print("Failed to load LLM: \(error)")
         }
@@ -177,7 +175,7 @@ final class AI {
         guard let session else {
             throw LLMError.failedToLoad(reason: "LLM not loaded")
         }
-
+        session.messages = messages
         return session.streamResponse(to: message, attachments: attachments)
     }
     

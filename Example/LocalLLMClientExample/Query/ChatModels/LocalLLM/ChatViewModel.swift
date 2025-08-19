@@ -20,16 +20,14 @@ final class ChatViewModel {
     private var generatingText = ""
 
     var messages: [LLMInput.Message] {
-        var messages = ai.messages
-        if !generatingText.isEmpty, messages.last?.role != .assistant {
-            messages.append(.assistant(generatingText))
+        var msgs = ai.messages
+        if !generatingText.isEmpty, msgs.last?.role != .assistant {
+            msgs.append(.assistant(generatingText))
         }
-        return messages
+        return msgs
     }
 
-    var isGenerating: Bool {
-        generateTask != nil
-    }
+    var isGenerating: Bool { generateTask != nil }
 
     // MARK: - Message Handling
 
@@ -40,26 +38,38 @@ final class ChatViewModel {
         inputText = ""
         inputAttachments = []
 
-        if ai.model == .foundation {
-            ai.messages.append(.user(currentInput.text, attachments: currentInput.images))
-        }
+        // Always append the user message ourselves (keeps history in ai.messages)
+        ai.messages.append(.user(currentInput.text, attachments: currentInput.images))
 
         generateTask = Task {
             generatingText = ""
             do {
-                let response: String
-
                 if ai.model == .foundation {
-                    response = try await foundationSession.send(currentInput.text)
-                    generatingText = response
-                    print("[sendMessage] FoundationModels reply:", response)
-                    ai.messages.append(.assistant(response))
+                    for try await chunk in foundationSession.stream(currentInput.text) {
+                        appendChunkSafely(chunk)
+                        // Force-publish (array element mutation won’t publish)
+                        _ = messages
+                    }
+                    // preserve final text in message history
+                    if !generatingText.isEmpty {
+                        ai.messages.append(.assistant(generatingText))
+                    }
                 } else {
+                    // Non-foundation (your existing streaming path)
+                    if !ai.isModelLoaded { await ai.loadLLM() }
                     for try await token in try await ai.ask(currentInput.text, attachments: currentInput.images) {
                         generatingText += token
+                        _ = messages
+                    }
+                    if !generatingText.isEmpty {
+                        ai.messages.append(.assistant(generatingText))
                     }
                 }
-
+            } catch is CancellationError {
+                // Keep whatever partial we had, append as assistant so the user doesn’t lose it
+                if !generatingText.isEmpty {
+                    ai.messages.append(.assistant(generatingText))
+                }
             } catch {
                 ai.messages.append(.assistant("Error: \(error.localizedDescription)"))
                 (inputText, inputAttachments) = currentInput
@@ -74,8 +84,26 @@ final class ChatViewModel {
     func cancelGeneration() {
         generateTask?.cancel()
         generateTask = nil
+        // do not clear `generatingText` here; let the task append the partial on cancel
     }
+    
+    private func appendChunkSafely(_ chunk: String) {
+        guard !chunk.isEmpty else { return }
+        if let last = generatingText.unicodeScalars.last,
+           let first = chunk.unicodeScalars.first {
 
+            let lastIsWord   = CharacterSet.alphanumerics.contains(last)
+            let firstIsWord  = CharacterSet.alphanumerics.contains(first)
+            let firstIsPunct = CharacterSet.punctuationCharacters.contains(first)
+
+            // Insert a space only when joining two “wordy” pieces
+            if lastIsWord && firstIsWord {
+                generatingText.append(" ")
+            }
+            // (no space before punctuation; models already emit spaces after punctuation)
+        }
+        generatingText.append(chunk)
+    }
     // MARK: - Cache Utilities
 
     /// Clear cache to free memory
