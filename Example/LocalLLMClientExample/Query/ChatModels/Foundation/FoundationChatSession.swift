@@ -89,6 +89,85 @@ public final class FoundationChatSession {
         )
         estimatedContextSize = estimateTokenCount(String(describing: instructions))
     }
+    
+    public func stream(_ query: String, chunkSize: Int = 8) -> AsyncThrowingStream<String, Error> {
+            AsyncThrowingStream { continuation in
+                Task { [weak self] in
+                    guard let self else { return }
+                    do {
+                        // --- If a native streaming API becomes available, replace this call:
+                        // for try await token in session.streamRespond(to: query) { continuation.yield(token) }
+                        // and remove the chunking below.
+
+                        let full = try await attemptSendQuery(query)
+
+                        // 2) Yield it in small chunks so UI can "stream"
+                        let pieces = Self.chunk(full, size: chunkSize)
+                        for piece in pieces {
+                            continuation.yield(piece)
+                            // tiny cooperative delay to let UI render
+                            try await Task.sleep(nanoseconds: 8_0_00_000) // ~8ms
+                        }
+
+                        // 3) Record turn + stats like `send(_:)`
+                        let tokenEstimate = estimateTokenCount(query + full)
+                        let turn = ConversationTurn(query: query, response: full, tokenEstimate: tokenEstimate)
+                        conversationHistory.append(turn)
+                        totalTokensUsed += tokenEstimate
+                        trimConversationHistory()
+                        checkContextHealth()
+                        await updateCacheIfNeeded()
+
+                        continuation.finish()
+                    } catch {
+                        // If we hit context error, try once to recreate and retry
+                        if isContextLimitError(error) {
+                            do {
+                                try await recreateSessionWithContinuity()
+                                let retried = try await attemptSendQuery(query)
+                                for piece in Self.chunk(retried, size: chunkSize) {
+                                    continuation.yield(piece)
+                                    try await Task.sleep(nanoseconds: 8_0_00_000)
+                                }
+                                let tokenEstimate = estimateTokenCount(query + retried)
+                                let turn = ConversationTurn(query: query, response: retried, tokenEstimate: tokenEstimate)
+                                conversationHistory.append(turn)
+                                totalTokensUsed += tokenEstimate
+                                trimConversationHistory()
+                                checkContextHealth()
+                                await updateCacheIfNeeded()
+                                continuation.finish()
+                            } catch {
+                                continuation.finish(throwing: error)
+                            }
+                        } else {
+                            continuation.finish(throwing: error)
+                        }
+                    }
+                }
+
+                // Cancel support: end the stream if the view model cancels
+                continuation.onTermination = { @Sendable _ in /* nothing else needed */ }
+            }
+        }
+
+        // Simple word-ish chunker
+        private static func chunk(_ s: String, size: Int) -> [String] {
+            guard size > 0 else { return [s] }
+            var out: [String] = []
+            let tokens = s.split(separator: " ", omittingEmptySubsequences: false)
+            var buffer: [Substring] = []
+            buffer.reserveCapacity(size)
+            for t in tokens {
+                buffer.append(t)
+                if buffer.count >= size {
+                    out.append(buffer.joined(separator: " "))
+                    buffer.removeAll(keepingCapacity: true)
+                }
+            }
+            if !buffer.isEmpty { out.append(buffer.joined(separator: " ")) }
+            return out
+        }
 
     public func send(_ query: String) async throws -> String {
         do {
@@ -112,93 +191,104 @@ public final class FoundationChatSession {
 
     private func attemptSendQuery(_ query: String) async throws -> String {
         guard let session else { throw SessionError.sessionCreationFailed }
-        
-        // Detailed prompt length debugging
+
+        // === Prompt length debugging (unchanged) ===
         print("========== PROMPT DEBUG START ==========")
-        
-        // Calculate individual components
         let queryLength = query.count
         let queryTokens = queryLength / 2
-        
-        // Conversation history length
         let historyText = conversationHistory.map { "\($0.query)\n\($0.response)" }.joined(separator: "\n")
         let historyLength = historyText.count
         let historyTokens = historyLength / 2
-        
-        // System instructions
         let instructionsLength = String(describing: instructions).count
         let instructionsTokens = instructionsLength / 2
-        
-        // Try to estimate tool context from previous calls
         let estimatedToolContext = conversationHistory.reduce(0) { total, turn in
-            return total + (turn.response.contains("Tool") ? 500 : 0)
+            total + (turn.response.contains("Tool") ? 500 : 0)
         }
-        
         let totalEstimatedChars = queryLength + historyLength + instructionsLength + estimatedToolContext
         let totalEstimatedTokens = totalEstimatedChars / 2
-        
+
         print("[PROMPT DEBUG] Query length: \(queryLength) chars (\(queryTokens) tokens)")
         print("[PROMPT DEBUG] History length: \(historyLength) chars (\(historyTokens) tokens)")
         print("[PROMPT DEBUG] Instructions length: \(instructionsLength) chars (\(instructionsTokens) tokens)")
         print("[PROMPT DEBUG] Estimated tool context: \(estimatedToolContext) chars")
         print("[PROMPT DEBUG] Total estimated: \(totalEstimatedChars) chars (\(totalEstimatedTokens) tokens)")
         print("[PROMPT DEBUG] Context utilization: \(Double(totalEstimatedTokens)/12000.0 * 100)%")
-        
-        // Detailed conversation history breakdown
         print("[PROMPT DEBUG] Conversation turns breakdown:")
         for (index, turn) in conversationHistory.enumerated() {
             let turnLength = turn.query.count + turn.response.count
             print("  Turn \(index + 1): \(turnLength) chars (Q:\(turn.query.count) + R:\(turn.response.count))")
         }
-        
         print("[PROMPT DEBUG] About to send query to LanguageModelSession...")
-        
+
         if isFirstInteraction { isFirstInteraction = false }
-        
-        // Time the actual call and wrap in detailed error handling
+
+        // === Metrics setup ===
         let startTime = Date()
-        
+        var samplerTask: Task<Double, Never>? = nil
+
+        // start peak RAM sampler (every 100ms)
+        samplerTask = Task.detached {
+            var peak = MemoryUsage.residentMB()
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+                let now = MemoryUsage.residentMB()
+                if now > peak { peak = now }
+            }
+            return peak
+        }
+
+        // Always cancel the sampler when we leave this function
+        defer {
+            samplerTask?.cancel()
+        }
+
         do {
             print("[PROMPT DEBUG] 🚀 Calling session.respond(to: \"\(query.prefix(50))...\")")
             let result = try await session.respond(to: query)
+
+            // stop sampler and compute metrics
+            samplerTask?.cancel()
+            let peak = await samplerTask?.value ?? -1
             let duration = Date().timeIntervalSince(startTime)
-            
-            print("[PROMPT DEBUG] ✅ Response received in \(duration)s")
+
+            print("[METRICS] Response in \(String(format: "%.2f", duration))s")
+            if peak >= 0 {
+                print("[METRICS] Peak RAM: \(String(format: "%.1f", peak)) MB")
+            }
+
             print("[PROMPT DEBUG] Response length: \(result.content.count) chars")
             print("========== PROMPT DEBUG END ==========")
-            
+
             guard !result.content.isEmpty else { throw SessionError.invalidResponse }
             return result.content
-            
+
         } catch {
+            // ensure sampler is stopped; await clean finish (non-throwing)
+            samplerTask?.cancel()
+            _ = await samplerTask?.value
+
             let duration = Date().timeIntervalSince(startTime)
             print("[PROMPT DEBUG] ❌ ERROR after \(duration)s: \(error)")
             print("[PROMPT DEBUG] Error type: \(type(of: error))")
             print("[PROMPT DEBUG] Error localized: \(error.localizedDescription)")
-            
-            // Try to extract more details from the error
+
             let errorString = String(describing: error)
             print("[PROMPT DEBUG] Full error description: \(errorString)")
-            
-            // Check if it's specifically a context window error
             if errorString.lowercased().contains("context") {
                 print("[PROMPT DEBUG] 🎯 CONTEXT ERROR DETECTED!")
-                print("[PROMPT DEBUG] This is where context limit was hit!")
                 print("[PROMPT DEBUG] Estimated context at failure: \(totalEstimatedTokens) tokens")
             }
-            
             if errorString.lowercased().contains("window") {
                 print("[PROMPT DEBUG] 🎯 WINDOW SIZE ERROR DETECTED!")
             }
-            
             if errorString.lowercased().contains("token") {
                 print("[PROMPT DEBUG] 🎯 TOKEN ERROR DETECTED!")
             }
-            
             print("========== PROMPT DEBUG ERROR END ==========")
             throw error
         }
     }
+
 
     private func recreateSessionWithContinuity() async throws {
         let contextSummary = createContextSummary()
