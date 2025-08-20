@@ -1,80 +1,74 @@
 import SwiftUI
+import LocalLLMClient
+import LocalLLMClientMLX
 
 struct QueryView: View {
     let ai: AI
-    private let mockDataContainer = loadMockDataContainer(from: mockData)!
+    let mockDataContainer: MockDataContainer
 
-    @State private var showingCacheSettings = false
     @State private var viewModel: ChatViewModel
+    @State private var showCacheSettings = false
 
     private let suggested = [
-        "Summarize my holdings",
-        "Top movers this week",
-        "Last 10 transactions",
-        "Portfolio value by sector",
-        "Cash vs. equities"
+        "Do I have Apple holdings?",
+        "What's my portfolio performance from Aug 2024 to Oct 2024?",
+        "Summarize my full portfolio.",
+        "What are my transactions last August?"
     ]
 
-    init(ai: AI) {
+    init(ai: AI, mockDataContainer: MockDataContainer) {
         self.ai = ai
-        self._viewModel = State(initialValue: ChatViewModel(
+        self.mockDataContainer = mockDataContainer
+        self._viewModel = State(wrappedValue: ChatViewModel(
             ai: ai,
-            mockDataContainer: loadMockDataContainer(from: mockData)!,
+            mockDataContainer: mockDataContainer,
             userPreferenceData: nil
         ))
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        QueryHeaderCard()
-                        SuggestedQueriesStrip(suggested: suggested)
-                        MessageList(messages: viewModel.messages, isGenerating: viewModel.isGenerating)
-                    }
-                }
+            ZStack {
+                VStack(spacing: 0) {
+                    // Header + suggestions (your components)
+                    QueryHeaderCard()
+                    SuggestedQueriesStrip(suggested: suggested)
 
-                BottomBar(
-                    ai: ai,
-                    text: $viewModel.inputText,
-                    attachments: $viewModel.inputAttachments,
-                    isGenerating: viewModel.isGenerating
-                ) { _ in
-                    viewModel.sendMessage()
-                } onCancel: {
-                    viewModel.cancelGeneration()
+                    // Messages
+                    MessageList(
+                        messages: viewModel.messages,
+                        isGenerating: viewModel.isGenerating
+                    )
+
+                    // Composer
+                    BottomBar(
+                        text: $viewModel.inputText,
+                        attachments: $viewModel.inputAttachments,
+                        isGenerating: viewModel.isGenerating
+                    ) { _ in
+                        viewModel.sendMessage()
+                    } onCancel: {
+                        viewModel.cancelGeneration()
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
                 }
-                .padding([.horizontal, .bottom])
+                // Loading overlay (your component)
+                LLMLoadingOverlay(isLoading: ai.isLoading, progress: ai.downloadProgress)
             }
-            .background(AppTheme.background.ignoresSafeArea())
-            .navigationTitle("Chat")
+            .navigationTitle(ai.model.name)
             .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button { showingCacheSettings = true } label: {
-                        Label("Cache Settings", systemImage: "archivebox")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(.ultraThinMaterial, in: Capsule())
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showCacheSettings = true
+                    } label: {
+                        Label("Cache", systemImage: "internaldrive")
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showingCacheSettings) {
-            CacheSettingsView()
-                .frame(minHeight: 350)
-            #if os(iOS)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-            #endif
-        }
-        .disabled(ai.isLoading)
-        .overlay {
-            LLMLoadingOverlay(isLoading: ai.isLoading, progress: ai.downloadProgress)
-        }
-        .onChange(of: ai.model) { _, _ in
-            ai.resetMessages()
+            .sheet(isPresented: $showCacheSettings) {
+                CacheSettingsView()
+            }
         }
     }
 }
