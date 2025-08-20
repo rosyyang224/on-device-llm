@@ -4,9 +4,8 @@
 
 import SwiftUI
 
-struct PassportIllustration: View { // keep the same type name so callers don’t break
+struct PassportHero: View {
     var body: some View {
-        // Chat-style, pill/bubble card
         ZStack {
             RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous)
                 .fill(AppTheme.capsuleGradient(AppTheme.primaryBlue))
@@ -14,7 +13,6 @@ struct PassportIllustration: View { // keep the same type name so callers don’
                 .shadow(color: AppTheme.primaryBlue.opacity(0.25), radius: 12, x: 0, y: 8)
 
             HStack(spacing: 16) {
-                // chat icon pill
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(.white.opacity(0.18))

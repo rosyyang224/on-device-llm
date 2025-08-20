@@ -8,7 +8,7 @@ struct ImagePicker: View {
 
     @State private var selectedItem: PhotosPickerItem?
     @State private var showSourceChooser = false
-    @State private var showCameraSheet = false   // iOS only
+    @State private var showCameraSheet = false
     @State private var showPhotosPicker = false
     @Namespace private var ns
 

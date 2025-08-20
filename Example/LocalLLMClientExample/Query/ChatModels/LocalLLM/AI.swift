@@ -141,7 +141,7 @@ final class AI: ObservableObject {
     }
 
     func resetMessages() {
-        messages = [.system(sysPrompt)]
+        messages = [.system(summarySysPrompt)]
         #if DEBUG
         print("[DEBUG] Messages reset. System prompt inserted.")
         #endif

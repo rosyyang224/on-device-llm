@@ -10,94 +10,35 @@ struct DocumentResultView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var appear = false
+    @State private var didRunOCR = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: AppTheme.Spacing.l) {
-
-                // Image preview with overlay boxes (toggleable)
                 if isImageVisible {
-                    ZStack {
-                        GeometryReader { geo in
-                            Image(decorative: image, scale: 1.0, orientation: .up)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: geo.size.width)
-                                .clipped()
-                                .overlay(
-                                    TextOverlayBox(
-                                        observations: keyValuePairs.compactMap { $0.keyTextObservation }
-                                    )
-                                )
-                        }
-                        .frame(height: 260)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.l, style: .continuous)
-                            .strokeBorder(.white.opacity(0.6), lineWidth: 0.5)
-                    )
-                    .card()
-                    .transition(.opacity.combined(with: .scale))
+                    ImagePreviewWithOverlay(image: image, keyValuePairs: keyValuePairs)
+                        .transition(.opacity.combined(with: .scale))
                 }
 
-                // Detected doc type card
-                ResultCardView(
-                    title: "Detected Document",
-                    subtitle: detectedDocumentType,
-                    icon: "doc.text.magnifyingglass"
-                )
+                DetectedDocTypeCard(text: detectedDocumentType)
 
-                // Extracted fields list
                 if !keyValuePairs.isEmpty {
-                    Text("Extracted Details").sectionHeader()
-
-                    let displayPairs: [KeyValuePair] = keyValuePairs.map {
-                        KeyValuePair(key: $0.key, value: $0.value ?? "")
-                    }
-
-                    KeyValueTableView(pairs: displayPairs) { pair in
-                        // Row tap: you could present a detail editor if desired.
-                        print("Tapped \(pair.key)")
-                    }
-                    .defaultAnimate(value: keyValuePairs.count)
+                    ExtractedDetailsSection(pairs: keyValuePairs)
                 }
 
-                // Actions row
-                HStack(spacing: AppTheme.Spacing.m) {
-                    Button {
-                        saveToJSON()
-                    } label: {
-                        Label("Save", systemImage: "tray.and.arrow.down.fill")
-                            .font(.headline)
-                            .padding(.horizontal, AppTheme.Spacing.xl)
-                            .padding(.vertical, AppTheme.Spacing.s)
-                            .background(AppTheme.primaryButtonColor)
-                            .foregroundStyle(AppTheme.primaryButtonTextColor)
-                            .clipShape(Capsule())
-                            .shadow(color: AppTheme.primaryBlue.opacity(0.25), radius: 8, x: 0, y: 6)
-                    }
-                    .buttonStyle(.plain)
+                ActionsRow(onSave: { saveToJSON() }, onScanAgain: { dismiss() })
+                    .padding(.top, AppTheme.Spacing.s)
 
-                    ScanAgainButton(title: "Scan Another") {
-                        dismiss()
-                    }
-                }
-                .padding(.top, AppTheme.Spacing.s)
-
-                // Show/Hide overlay toggle
-                Button(isImageVisible ? "Hide Image" : "Show Image") {
+                OverlayToggle(isOn: $isImageVisible) {
                     withAnimation(.easeInOut(duration: 0.25)) { isImageVisible.toggle() }
                 }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.primaryBlue)
                 .padding(.top, AppTheme.Spacing.xs)
             }
             .padding(.horizontal, AppTheme.Spacing.l)
             .padding(.top, AppTheme.Spacing.l)
-            .opacity(appear ? 1 : 0)
-            .offset(y: appear ? 0 : 8)
             .onAppear {
+                guard !didRunOCR else { return }
+                didRunOCR = true
                 withAnimation(.easeOut(duration: 0.35)) { appear = true }
                 runFullOCR(on: image)
             }
@@ -191,7 +132,7 @@ struct DocumentResultView: View {
         }
 
         request.recognitionLevel = .accurate
-        request.recognitionLanguages = ["cs_CZ", "en_GB"]
+        request.recognitionLanguages = ["cs-CZ", "en-GB"]
         request.regionOfInterest = regionOfInterest ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
         let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])

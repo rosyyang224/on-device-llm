@@ -5,7 +5,6 @@ import CoreGraphics
 import ImageIO
 
 struct OCRView: View {
-    // Image as raw bytes (no UIKit / NSImage)
     @State private var imageData: Data? = nil
     @State private var selectedItem: PhotosPickerItem? = nil
 
@@ -19,7 +18,7 @@ struct OCRView: View {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.xl) {
 
                     // Hero Illustration
-                    PassportIllustration()
+                    PassportHero()
                         .padding(.top, AppTheme.Spacing.m)
 
                     // Context text

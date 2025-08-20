@@ -14,8 +14,12 @@ struct SystemCameraView: UIViewControllerRepresentable {
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
             let uiImage = (info[.originalImage] ?? info[.editedImage]) as? UIImage
             let data = uiImage?.jpegData(compressionQuality: 0.9) ?? uiImage?.pngData()
-            parent.onCapture(data)
-            picker.dismiss(animated: true)
+
+            let completion = parent.onCapture
+            DispatchQueue.main.async {
+                completion(data)
+                picker.dismiss(animated: true)
+            }
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
