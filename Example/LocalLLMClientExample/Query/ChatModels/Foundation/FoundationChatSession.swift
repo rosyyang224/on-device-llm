@@ -1,9 +1,9 @@
 //
-//  FoundationChatSession.swift (Enhanced with Caching)
+//  FoundationChatSession.swift (Single Chat Flow + Context Rebuild; no temp-session persistence)
 //  LocalLLMClientExample
 //
 //  Created by Rosemary Yang on 7/29/25.
-//  Enhanced by Assistant on 7/29/25.
+//  Minimal patch by Assistant
 //
 
 import Foundation
@@ -14,20 +14,25 @@ public final class FoundationChatSession {
     private var session: LanguageModelSession?
     private var isFirstInteraction = true
 
-    // Session state
+    // ===== Session state =====
     private var conversationHistory: [ConversationTurn] = []
     private var sessionAttempts = 0
     private let maxSessionAttempts = 3
+
+    // (kept for local trimming; rebuild uses separate thresholds below)
     private let maxHistoryLength = 10
 
-    // Context tracking
+    // ===== Context tracking =====
     private var totalTokensUsed: Int = 0
     private var estimatedContextSize: Int = 0
 
-    // Caching integration
+    // ===== Rebuild thresholds =====
+    private let maxEntries = 40                // total entries allowed before rebuild
+    private let maxTokensBudget = 12000        // rough model context estimate
+    private let keepTailCount = 8              // how many recent entries to retain verbatim
+
+    // ===== IDs (kept; but no temp-session persistence) =====
     private(set) public var sessionId: UUID
-    private var lastCacheUpdate: Date = Date()
-    private let cacheUpdateInterval: TimeInterval = 30 // Cache every 30 seconds
 
     private let container: MockDataContainer
     private let userPreferenceData: String?
@@ -61,6 +66,8 @@ public final class FoundationChatSession {
         }
     }
 
+    // MARK: - Init
+
     init(container: MockDataContainer, userPreferenceData: String? = nil) {
         self.container = container
         self.userPreferenceData = userPreferenceData
@@ -83,91 +90,85 @@ public final class FoundationChatSession {
             return prefData
         })
         let tools: [any Tool] = [getHoldingsTool, getPortfolioValTool, getTransactionsTool, getUserPrefTool]
+
         self.session = LanguageModelSession(
             tools: tools,
             instructions: instructions
         )
+        // very rough initial estimate
         estimatedContextSize = estimateTokenCount(String(describing: instructions))
     }
-    
+
+    // MARK: - Public: stream & send
+
     public func stream(_ query: String, chunkSize: Int = 8) -> AsyncThrowingStream<String, Error> {
-            AsyncThrowingStream { continuation in
-                Task { [weak self] in
-                    guard let self else { return }
-                    do {
-                        // --- If a native streaming API becomes available, replace this call:
-                        // for try await token in session.streamRespond(to: query) { continuation.yield(token) }
-                        // and remove the chunking below.
+        AsyncThrowingStream { continuation in
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    let full = try await attemptSendQuery(query)
 
-                        let full = try await attemptSendQuery(query)
+                    // yield in simple word chunks
+                    for piece in Self.chunk(full, size: chunkSize) {
+                        continuation.yield(piece)
+                        try await Task.sleep(nanoseconds: 8_0_00_000)
+                    }
 
-                        // 2) Yield it in small chunks so UI can "stream"
-                        let pieces = Self.chunk(full, size: chunkSize)
-                        for piece in pieces {
-                            continuation.yield(piece)
-                            // tiny cooperative delay to let UI render
-                            try await Task.sleep(nanoseconds: 8_0_00_000) // ~8ms
-                        }
+                    let tokenEstimate = estimateTokenCount(query + full)
+                    let turn = ConversationTurn(query: query, response: full, tokenEstimate: tokenEstimate)
+                    conversationHistory.append(turn)
+                    totalTokensUsed += tokenEstimate
 
-                        // 3) Record turn + stats like `send(_:)`
-                        let tokenEstimate = estimateTokenCount(query + full)
-                        let turn = ConversationTurn(query: query, response: full, tokenEstimate: tokenEstimate)
-                        conversationHistory.append(turn)
-                        totalTokensUsed += tokenEstimate
-                        trimConversationHistory()
-                        checkContextHealth()
-                        await updateCacheIfNeeded()
+                    trimConversationHistory()
+                    checkContextHealth() // now delegates to maybeRebuildIfNeeded()
 
-                        continuation.finish()
-                    } catch {
-                        // If we hit context error, try once to recreate and retry
-                        if isContextLimitError(error) {
-                            do {
-                                try await recreateSessionWithContinuity()
-                                let retried = try await attemptSendQuery(query)
-                                for piece in Self.chunk(retried, size: chunkSize) {
-                                    continuation.yield(piece)
-                                    try await Task.sleep(nanoseconds: 8_0_00_000)
-                                }
-                                let tokenEstimate = estimateTokenCount(query + retried)
-                                let turn = ConversationTurn(query: query, response: retried, tokenEstimate: tokenEstimate)
-                                conversationHistory.append(turn)
-                                totalTokensUsed += tokenEstimate
-                                trimConversationHistory()
-                                checkContextHealth()
-                                await updateCacheIfNeeded()
-                                continuation.finish()
-                            } catch {
-                                continuation.finish(throwing: error)
+                    continuation.finish()
+                } catch {
+                    if isContextLimitError(error) {
+                        do {
+                            try await recreateSessionWithContinuity()
+                            let retried = try await attemptSendQuery(query)
+                            for piece in Self.chunk(retried, size: chunkSize) {
+                                continuation.yield(piece)
+                                try await Task.sleep(nanoseconds: 8_0_00_000)
                             }
-                        } else {
+                            let tokenEstimate = estimateTokenCount(query + retried)
+                            let turn = ConversationTurn(query: query, response: retried, tokenEstimate: tokenEstimate)
+                            conversationHistory.append(turn)
+                            totalTokensUsed += tokenEstimate
+
+                            trimConversationHistory()
+                            checkContextHealth()
+
+                            continuation.finish()
+                        } catch {
                             continuation.finish(throwing: error)
                         }
+                    } else {
+                        continuation.finish(throwing: error)
                     }
                 }
+            }
+            continuation.onTermination = { @Sendable _ in }
+        }
+    }
 
-                // Cancel support: end the stream if the view model cancels
-                continuation.onTermination = { @Sendable _ in /* nothing else needed */ }
+    private static func chunk(_ s: String, size: Int) -> [String] {
+        guard size > 0 else { return [s] }
+        var out: [String] = []
+        let tokens = s.split(separator: " ", omittingEmptySubsequences: false)
+        var buffer: [Substring] = []
+        buffer.reserveCapacity(size)
+        for t in tokens {
+            buffer.append(t)
+            if buffer.count >= size {
+                out.append(buffer.joined(separator: " "))
+                buffer.removeAll(keepingCapacity: true)
             }
         }
-
-        // Simple word-ish chunker
-        private static func chunk(_ s: String, size: Int) -> [String] {
-            guard size > 0 else { return [s] }
-            var out: [String] = []
-            let tokens = s.split(separator: " ", omittingEmptySubsequences: false)
-            var buffer: [Substring] = []
-            buffer.reserveCapacity(size)
-            for t in tokens {
-                buffer.append(t)
-                if buffer.count >= size {
-                    out.append(buffer.joined(separator: " "))
-                    buffer.removeAll(keepingCapacity: true)
-                }
-            }
-            if !buffer.isEmpty { out.append(buffer.joined(separator: " ")) }
-            return out
-        }
+        if !buffer.isEmpty { out.append(buffer.joined(separator: " ")) }
+        return out
+    }
 
     public func send(_ query: String) async throws -> String {
         do {
@@ -176,9 +177,10 @@ public final class FoundationChatSession {
             let turn = ConversationTurn(query: query, response: response, tokenEstimate: tokenEstimate)
             conversationHistory.append(turn)
             totalTokensUsed += tokenEstimate
+
             trimConversationHistory()
             checkContextHealth()
-            await updateCacheIfNeeded()
+
             return response
         } catch {
             if isContextLimitError(error) {
@@ -189,10 +191,12 @@ public final class FoundationChatSession {
         }
     }
 
+    // MARK: - Core query
+
     private func attemptSendQuery(_ query: String) async throws -> String {
         guard let session else { throw SessionError.sessionCreationFailed }
 
-        // === Prompt length debugging (unchanged) ===
+        // ===== Prompt debug (unchanged) =====
         print("========== PROMPT DEBUG START ==========")
         let queryLength = query.count
         let queryTokens = queryLength / 2
@@ -222,48 +226,37 @@ public final class FoundationChatSession {
 
         if isFirstInteraction { isFirstInteraction = false }
 
-        // === Metrics setup ===
+        // ===== Metrics =====
         let startTime = Date()
         var samplerTask: Task<Double, Never>? = nil
-
-        // start peak RAM sampler (every 100ms)
         samplerTask = Task.detached {
             var peak = MemoryUsage.residentMB()
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+                try? await Task.sleep(nanoseconds: 100_000_000)
                 let now = MemoryUsage.residentMB()
                 if now > peak { peak = now }
             }
             return peak
         }
-
-        // Always cancel the sampler when we leave this function
-        defer {
-            samplerTask?.cancel()
-        }
+        defer { samplerTask?.cancel() }
 
         do {
             print("[PROMPT DEBUG] 🚀 Calling session.respond(to: \"\(query.prefix(50))...\")")
             let result = try await session.respond(to: query)
 
-            // stop sampler and compute metrics
             samplerTask?.cancel()
             let peak = await samplerTask?.value ?? -1
             let duration = Date().timeIntervalSince(startTime)
 
             print("[METRICS] Response in \(String(format: "%.2f", duration))s")
-            if peak >= 0 {
-                print("[METRICS] Peak RAM: \(String(format: "%.1f", peak)) MB")
-            }
+            if peak >= 0 { print("[METRICS] Peak RAM: \(String(format: "%.1f", peak)) MB") }
 
             print("[PROMPT DEBUG] Response length: \(result.content.count) chars")
             print("========== PROMPT DEBUG END ==========")
 
             guard !result.content.isEmpty else { throw SessionError.invalidResponse }
             return result.content
-
         } catch {
-            // ensure sampler is stopped; await clean finish (non-throwing)
             samplerTask?.cancel()
             _ = await samplerTask?.value
 
@@ -271,7 +264,6 @@ public final class FoundationChatSession {
             print("[PROMPT DEBUG] ❌ ERROR after \(duration)s: \(error)")
             print("[PROMPT DEBUG] Error type: \(type(of: error))")
             print("[PROMPT DEBUG] Error localized: \(error.localizedDescription)")
-
             let errorString = String(describing: error)
             print("[PROMPT DEBUG] Full error description: \(errorString)")
             if errorString.lowercased().contains("context") {
@@ -289,30 +281,63 @@ public final class FoundationChatSession {
         }
     }
 
+    // MARK: - Rebuild with continuity (NEW behavior; replaces temp-session persistence)
 
-    private func recreateSessionWithContinuity() async throws {
-        let contextSummary = createContextSummary()
-
-        session = nil
-        isFirstInteraction = true
-        initializeSession()
-        guard session != nil else { throw SessionError.sessionCreationFailed }
-
-        if !contextSummary.isEmpty {
-            try await restoreContext(from: contextSummary)
-        }
+    private func isOverBudget() -> Bool {
+        // quick estimate: number of entries or rough tokens
+        if conversationHistory.count > maxEntries { return true }
+        let approxTokens = conversationHistory.reduce(0) { $0 + ($1.query.count + $1.response.count) / 4 }
+        return approxTokens > maxTokensBudget
     }
 
-    private func checkContextHealth() {
-        let currentEstimate = estimatedContextSize + totalTokensUsed
-        let warningThreshold = 3800
-        let criticalThreshold = 4096
-        if currentEstimate > criticalThreshold {
+    private func maybeRebuildIfNeeded() {
+        if isOverBudget() {
             Task { try await recreateSessionWithContinuity() }
         }
     }
 
+    private func recreateSessionWithContinuity() async throws {
+        // Build a compact seed: compressed summary of older turns + keep recent turns
+        let nonSystem = conversationHistory // your turns are already user/assistant pairs
+        let keepTail = Array(nonSystem.suffix(keepTailCount))
+        let summarizeHead = Array(nonSystem.dropLast(keepTail.count))
+
+        // small, deterministic summary of older context
+        var contextSummary = ""
+        if !summarizeHead.isEmpty {
+            let bullets = summarizeHead.prefix(8).map { t in
+                "- U: \(t.query.prefix(120))\n  A: \(t.response.prefix(160))"
+            }.joined(separator: "\n")
+            contextSummary = "Previous context (compressed):\n" + bullets
+        }
+
+        // rebuild underlying session with same tools/config
+        session = nil
+        isFirstInteraction = true
+        initializeSession()
+        guard let session else { throw SessionError.sessionCreationFailed }
+
+        // Replay a single compact history message so the model “remembers”
+        if !contextSummary.isEmpty {
+            _ = try await session.respond(to: "Context summary:\n\(contextSummary)\n\nContinue the conversation.")
+        }
+
+        // Re-append the recent tail turns as plain text “reminders” (optional, cheap)
+        if !keepTail.isEmpty {
+            let tailText = keepTail.map { "U: \($0.query)\nA: \($0.response)" }.joined(separator: "\n\n")
+            _ = try await session.respond(to: "Recent messages for continuity:\n\(tailText)\n\nAcknowledge and wait for the next user message.")
+        }
+    }
+
+    // MARK: - Health & trimming
+
+    private func checkContextHealth() {
+        // Old heuristic replaced with rebuild gate
+        maybeRebuildIfNeeded()
+    }
+
     private func trimConversationHistory() {
+        // keep early 2 + most recent (maxHistoryLength - 2)
         if conversationHistory.count > maxHistoryLength {
             let keepEarly = 2
             let keepRecent = maxHistoryLength - keepEarly
@@ -332,93 +357,8 @@ public final class FoundationChatSession {
         return text.count / 2
     }
 
-    // MARK: - Enhanced Caching Methods
+    // MARK: - Public helpers
 
-    private func updateCacheIfNeeded() async {
-        let now = Date()
-        if now.timeIntervalSince(lastCacheUpdate) > cacheUpdateInterval && !conversationHistory.isEmpty {
-            await saveTempSession()
-            lastCacheUpdate = now
-        }
-    }
-
-    private func saveTempSession() async {
-        let tempSession = TempSessionState(
-            sessionId: sessionId,
-            conversationHistory: conversationHistory,
-            totalTokensUsed: totalTokensUsed,
-            estimatedContextSize: estimatedContextSize,
-            lastSaved: Date()
-        )
-
-        if let encoded = try? JSONEncoder().encode(tempSession) {
-            UserDefaults.standard.set(encoded, forKey: "temp_foundation_session_\(sessionId)")
-        }
-    }
-
-    private func loadTempSession() -> TempSessionState? {
-        guard let data = UserDefaults.standard.data(forKey: "temp_foundation_session_\(sessionId)"),
-              let session = try? JSONDecoder().decode(TempSessionState.self, from: data) else {
-            return nil
-        }
-        return session
-    }
-
-    private func createContextSummary() -> String {
-        guard !conversationHistory.isEmpty else { return "" }
-
-        let recentTurns = conversationHistory.suffix(3)
-        var summary = "Previous conversation context:\n"
-
-        for turn in recentTurns {
-            summary += "User: \(turn.query.prefix(100))\n"
-            summary += "Assistant: \(turn.response.prefix(200))\n"
-        }
-
-        return summary
-    }
-
-    private func restoreContext(from summary: String) async throws {
-        guard let session = session else { return }
-
-        let contextMessage = "Context from previous session: \(summary)"
-        _ = try await session.respond(to: contextMessage)
-    }
-
-    // MARK: - Public Cache Integration Methods
-
-    /// Restore session from cached conversation turns
-    public func restoreFromCache(_ cachedTurns: [ConversationTurn]) {
-        conversationHistory = cachedTurns
-        totalTokensUsed = cachedTurns.reduce(0) { $0 + $1.tokenEstimate }
-        Task { @MainActor in
-            try await recreateSessionWithContinuity()
-        }
-    }
-
-    /// Get a serializable session state for caching
-    public func getSessionState() -> SessionState {
-        return SessionState(
-            sessionId: sessionId,
-            conversationHistory: conversationHistory,
-            totalTokensUsed: totalTokensUsed,
-            estimatedContextSize: estimatedContextSize,
-            sessionAttempts: sessionAttempts,
-            lastUpdated: Date()
-        )
-    }
-
-    /// Restore session from a saved state
-    public func restoreFromState(_ state: SessionState) {
-        sessionId = state.sessionId
-        conversationHistory = state.conversationHistory
-        totalTokensUsed = state.totalTokensUsed
-        estimatedContextSize = state.estimatedContextSize
-        sessionAttempts = state.sessionAttempts
-        initializeSession()
-    }
-
-    // Context and debug helpers
     public func refreshContext() {
         sessionAttempts = 0
         initializeSession()
@@ -429,10 +369,8 @@ public final class FoundationChatSession {
         conversationHistory.removeAll()
         totalTokensUsed = 0
         sessionAttempts = 0
-        let oldSessionId = sessionId
         sessionId = UUID()
-        UserDefaults.standard.removeObject(forKey: "temp_foundation_session_\(oldSessionId)")
-        UserDefaults.standard.removeObject(forKey: "temp_foundation_session_\(sessionId)")
+        // Removed: no temp-session persistence in UserDefaults anymore
     }
 
     public func getConversationHistory() -> [ConversationTurn] {
@@ -455,62 +393,33 @@ public final class FoundationChatSession {
         )
     }
 
-    // Debug helper method
-    public func debugCurrentContext() {
-        print("========== CONTEXT STATE DEBUG ==========")
-        print("Session ID: \(sessionId)")
-        print("Is first interaction: \(isFirstInteraction)")
-        print("Session attempts: \(sessionAttempts)")
-        print("Conversation turns: \(conversationHistory.count)")
-        print("Total tokens used (estimate): \(totalTokensUsed)")
-        print("Estimated context size: \(estimatedContextSize)")
-        
-        let totalChars = conversationHistory.reduce(0) { $0 + $1.query.count + $1.response.count }
-        print("Total conversation chars: \(totalChars)")
-        
-        // Print recent conversation snippet
-        if let lastTurn = conversationHistory.last {
-            print("Last query: '\(lastTurn.query.prefix(100))...'")
-            print("Last response: '\(lastTurn.response.prefix(100))...'")
+    // MARK: - (Kept) SessionState/Stats types
+
+    public struct SessionState: Codable {
+        public let sessionId: UUID
+        public let conversationHistory: [FoundationChatSession.ConversationTurn]
+        public let totalTokensUsed: Int
+        public let estimatedContextSize: Int
+        public let sessionAttempts: Int
+        public let lastUpdated: Date
+    }
+
+    public struct ConversationStats {
+        public let totalTurns: Int
+        public let totalTokens: Int
+        public let averageTokensPerTurn: Int
+        public let sessionDuration: TimeInterval
+        public let contextUtilization: Double
+
+        public var formattedDuration: String {
+            let formatter = DateComponentsFormatter()
+            formatter.allowedUnits = [.hour, .minute, .second]
+            formatter.unitsStyle = .abbreviated
+            return formatter.string(from: fabs(sessionDuration)) ?? "0s"
         }
-        print("========== CONTEXT STATE DEBUG END ==========")
-    }
-}
 
-// MARK: - Supporting Types
-
-public struct SessionState: Codable {
-    public let sessionId: UUID
-    public let conversationHistory: [FoundationChatSession.ConversationTurn]
-    public let totalTokensUsed: Int
-    public let estimatedContextSize: Int
-    public let sessionAttempts: Int
-    public let lastUpdated: Date
-}
-
-private struct TempSessionState: Codable {
-    let sessionId: UUID
-    let conversationHistory: [FoundationChatSession.ConversationTurn]
-    let totalTokensUsed: Int
-    let estimatedContextSize: Int
-    let lastSaved: Date
-}
-
-public struct ConversationStats {
-    public let totalTurns: Int
-    public let totalTokens: Int
-    public let averageTokensPerTurn: Int
-    public let sessionDuration: TimeInterval
-    public let contextUtilization: Double
-
-    public var formattedDuration: String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.hour, .minute, .second]
-        formatter.unitsStyle = .abbreviated
-        return formatter.string(from: fabs(sessionDuration)) ?? "0s"
-    }
-
-    public var utilizationPercentage: String {
-        return String(format: "%.1f%%", contextUtilization * 100)
+        public var utilizationPercentage: String {
+            return String(format: "%.1f%%", contextUtilization * 100)
+        }
     }
 }
