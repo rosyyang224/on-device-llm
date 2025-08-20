@@ -3,20 +3,18 @@ import LocalLLMClient
 import LocalLLMClientMLX
 
 struct ChatView: View {
-    let ai: AI
+    @EnvironmentObject var ai: AI 
     @State var viewModel: ChatViewModel
     @State private var position = ScrollPosition(idType: LLMInput.Message.ID.self)
 
     var body: some View {
         VStack {
-
             MessageList(
                 messages: viewModel.messages,
                 isGenerating: viewModel.isGenerating
             )
 
             BottomBar(
-                ai: ai,
                 text: $viewModel.inputText,
                 attachments: $viewModel.inputAttachments,
                 isGenerating: viewModel.isGenerating
@@ -37,17 +35,8 @@ struct ChatView: View {
 
                     Divider()
 
-                    Button {
-                        Task { await ai.toggleTools() }
-                    } label: {
-                        HStack {
-                            Text("Tools calling")
-                            if ai.areToolsEnabled {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                    .disabled(!ai.model.supportsTools)
+                    Label("Tool calling enabled", systemImage: "checkmark")
+                        .disabled(true)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -58,6 +47,7 @@ struct ChatView: View {
         }
     }
 }
+
 
 struct MessageList: View {
     let messages: [LLMInput.Message]

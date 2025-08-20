@@ -15,7 +15,7 @@ final class ChatViewModel {
 
     var inputText = ""
     var inputAttachments: [LLMAttachment] = []
-
+    
     private var generateTask: Task<Void, Never>?
     private var generatingText = ""
 
@@ -32,61 +32,94 @@ final class ChatViewModel {
     // MARK: - Message Handling
 
     func sendMessage() {
-        guard !inputText.isEmpty, !isGenerating else { return }
+        #if DEBUG
+        print("[DEBUG] ChatViewModel.sendMessage() called")
+        print("[DEBUG] inputText: '\(inputText)'")
+        print("[DEBUG] isGenerating: \(isGenerating)")
+        #endif
+
+        guard !inputText.isEmpty, !isGenerating else {
+            #if DEBUG
+            print("[DEBUG] sendMessage() guard failed - returning early")
+            #endif
+            return
+        }
 
         let currentInput = (text: inputText, images: inputAttachments)
         inputText = ""
         inputAttachments = []
 
-        // Always append the user message ourselves (keeps history in ai.messages)
-        ai.messages.append(.user(currentInput.text, attachments: currentInput.images))
+        #if DEBUG
+        print("[DEBUG] Current input captured: '\(currentInput.text)'")
+        print("[DEBUG] Current model: \(ai.model)")
+        #endif
 
         generateTask = Task {
+            #if DEBUG
+            print("[DEBUG] Inside generateTask - starting")
+            #endif
+
             generatingText = ""
             do {
                 if ai.model == .foundation {
+                    #if DEBUG
+                    print("[DEBUG] Using foundation model branch")
+                    #endif
+
+                    // Append user message immediately (foundationSession doesn't depend on ai.session)
+                    ai.messages.append(.user(currentInput.text, attachments: currentInput.images))
+                    #if DEBUG
+                    print("[DEBUG] User message appended (foundation). Total messages: \(ai.messages.count)")
+                    #endif
+
                     for try await chunk in foundationSession.stream(currentInput.text) {
                         appendChunkSafely(chunk)
-                        // Force-publish (array element mutation won’t publish)
-                        _ = messages
+                        _ = messages // force-publish
                     }
-                    // preserve final text in message history
+
                     if !generatingText.isEmpty {
                         ai.messages.append(.assistant(generatingText))
+                        #if DEBUG
+                        print("[DEBUG] Assistant message appended to ai.messages (foundation)")
+                        #endif
                     }
+
                 } else {
-                    // Non-foundation (your existing streaming path)
-                    if !ai.isModelLoaded { await ai.loadLLM() }
+                    
                     for try await token in try await ai.ask(currentInput.text, attachments: currentInput.images) {
                         generatingText += token
-                        _ = messages
                     }
-                    if !generatingText.isEmpty {
-                        ai.messages.append(.assistant(generatingText))
-                    }
-                }
-            } catch is CancellationError {
-                // Keep whatever partial we had, append as assistant so the user doesn’t lose it
-                if !generatingText.isEmpty {
-                    ai.messages.append(.assistant(generatingText))
                 }
             } catch {
+                #if DEBUG
+                print("[DEBUG] Error occurred in generateTask: \(error)")
+                print("[DEBUG] Error type: \(type(of: error))")
+                print("[DEBUG] Error localized: \(error.localizedDescription)")
+                #endif
                 ai.messages.append(.assistant("Error: \(error.localizedDescription)"))
                 (inputText, inputAttachments) = currentInput
                 print("[sendMessage] Error occurred:", error.localizedDescription)
             }
 
+            #if DEBUG
+            print("[DEBUG] generateTask completing - cleaning up")
+            #endif
             generateTask = nil
             generatingText = ""
+            #if DEBUG
+            print("[DEBUG] generateTask completed")
+            #endif
         }
     }
 
     func cancelGeneration() {
+        #if DEBUG
+        print("[DEBUG] cancelGeneration() called")
+        #endif
         generateTask?.cancel()
         generateTask = nil
-        // do not clear `generatingText` here; let the task append the partial on cancel
     }
-    
+
     private func appendChunkSafely(_ chunk: String) {
         guard !chunk.isEmpty else { return }
         if let last = generatingText.unicodeScalars.last,
@@ -96,14 +129,14 @@ final class ChatViewModel {
             let firstIsWord  = CharacterSet.alphanumerics.contains(first)
             let firstIsPunct = CharacterSet.punctuationCharacters.contains(first)
 
-            // Insert a space only when joining two “wordy” pieces
             if lastIsWord && firstIsWord {
                 generatingText.append(" ")
             }
-            // (no space before punctuation; models already emit spaces after punctuation)
+            // no space before punctuation; models usually emit needed spaces
         }
         generatingText.append(chunk)
     }
+
     // MARK: - Cache Utilities
 
     /// Clear cache to free memory
@@ -114,6 +147,6 @@ final class ChatViewModel {
     /// Get cache performance stats
     func getCacheStats() -> String {
         let stats = cache.getCacheStats()
-        return "Cache.contexts) contexts, \(stats.tools) tools"
+        return "Cache: \(stats.contexts) contexts, \(stats.tools) tools"
     }
 }

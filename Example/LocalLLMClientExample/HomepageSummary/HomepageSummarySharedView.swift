@@ -23,6 +23,7 @@ struct HomepageSummaryHeaderView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 20)
+        .onAppear { print("[DEBUG] HomepageSummaryHeaderView appeared with title=\(title)") }
     }
 }
 
@@ -34,22 +35,34 @@ struct HomepageAIPipelineSelector: View {
             PipelineToggleButton(
                 title: "Foundation",
                 isSelected: ai.model == .foundation,
-                action: { ai.model = .foundation }
+                action: {
+                    print("[DEBUG] Pipeline selected: Foundation - starting new session")
+                    ai.model = .foundation
+                    ai.resetMessages() // New session for new model
+                }
             )
             PipelineToggleButton(
                 title: "MLX",
                 isSelected: ai.model.isMLX && ai.model != .foundation,
-                action: { ai.model = .qwen3_4b }
+                action: {
+                    print("[DEBUG] Pipeline selected: MLX (Qwen3-4B) - starting new session")
+                    ai.model = .qwen3_4b
+                    ai.resetMessages() // New session for new model
+                }
             )
             PipelineToggleButton(
                 title: "Llama.cpp",
                 isSelected: !ai.model.isMLX && ai.model != .foundation,
-                action: { ai.model = .gemma3_4b }
+                action: {
+                    print("[DEBUG] Pipeline selected: Llama.cpp (Gemma3-4B) - starting new session")
+                    ai.model = .gemma3_4b
+                    ai.resetMessages() // New session for new model
+                }
             )
         }
+        .onAppear { print("[DEBUG] HomepageAIPipelineSelector appeared, current model=\(ai.model)") }
     }
 }
-
 
 struct HomepageEmptySummaryPanel: View {
     var body: some View {
@@ -67,6 +80,7 @@ struct HomepageEmptySummaryPanel: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+        .onAppear { print("[DEBUG] HomepageEmptySummaryPanel appeared") }
     }
 }
 
@@ -97,6 +111,7 @@ struct HomepageSummaryPanel: View {
         .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .onAppear { print("[DEBUG] HomepageSummaryPanel appeared with modelName=\(modelName)") }
     }
 }
 
@@ -137,6 +152,8 @@ struct UserSummaryPanel: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 30)
+                        .onAppear { print("[DEBUG] UserSummaryPanel: Generating state active") }
+
                     } else if let summary = viewModel.currentSummary {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -159,6 +176,8 @@ struct UserSummaryPanel: View {
                         .padding(12)
                         .background(Color.gray.opacity(0.05))
                         .cornerRadius(8)
+                        .onAppear { print("[DEBUG] UserSummaryPanel: Showing summary for \(userType)") }
+
                     } else {
                         VStack(spacing: 8) {
                             Image(systemName: "doc.text")
@@ -171,6 +190,7 @@ struct UserSummaryPanel: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 30)
+                        .onAppear { print("[DEBUG] UserSummaryPanel: No summary yet for \(userType)") }
                     }
                 }
                 .padding(.horizontal, 12)
@@ -183,6 +203,7 @@ struct UserSummaryPanel: View {
                     .foregroundColor(.red)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 8)
+                    .onAppear { print("[DEBUG] UserSummaryPanel: Error shown - \(error)") }
             }
         }
         .frame(maxWidth: .infinity)
@@ -193,5 +214,6 @@ struct UserSummaryPanel: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(color.opacity(0.3), lineWidth: 1)
         )
+        .onAppear { print("[DEBUG] UserSummaryPanel appeared for \(userType)") }
     }
 }

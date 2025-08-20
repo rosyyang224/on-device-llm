@@ -2,25 +2,12 @@ import SwiftUI
 
 @main
 struct MyApp: App {
-    @State private var aiQuery: AI?
-    
+    @StateObject private var ai = AI(mockData: mockData, userlogProvider: { "" })
+
     var body: some Scene {
         WindowGroup {
-            if let query = aiQuery {
-                MainHomeView(aiQuery: query)
-            } else {
-                ProgressView("Loading AI Query Model...")
-                    .onAppear {
-                        initializeQueryAI()
-                    }
-            }
-        }
-    }
-    
-    private func initializeQueryAI() {
-        Task { @MainActor in
-            let query = AI(mockData: mockData, userlogProvider: { "" })
-            aiQuery = query
+            MainHomeView()
+                .environmentObject(ai) // one shared AI instance app-wide
         }
     }
 }

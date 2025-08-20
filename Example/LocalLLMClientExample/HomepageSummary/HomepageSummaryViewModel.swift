@@ -23,6 +23,11 @@ class HomepageSummaryViewModel: ObservableObject {
         self.chatViewModel = chatViewModel
     }
     
+    func clearCurrentSummary() {
+        currentSummary = nil
+        errorMessage = nil
+    }
+    
     func generateSummary() async {
         guard let chatViewModel = chatViewModel, !isGenerating else { return }
         
@@ -31,6 +36,9 @@ class HomepageSummaryViewModel: ObservableObject {
         currentSummary = nil
         
         generateTask = Task {
+            // Start fresh session - reset messages
+            chatViewModel.ai.resetMessages()
+            
             initialMessageCount = chatViewModel.messages.count
             
             // Load model on-demand if needed (non-foundation models)

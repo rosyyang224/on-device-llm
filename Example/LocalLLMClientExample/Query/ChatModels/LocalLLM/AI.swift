@@ -108,33 +108,46 @@ public enum LLMModel: Sendable, CaseIterable, Identifiable {
     }
 }
 
-@Observable @MainActor
-final class AI {
+@MainActor
+final class AI: ObservableObject {
     let tools: [any LLMTool]
     var model = LLMModel.qwen3 {
         didSet {
             areToolsEnabled = model.supportsTools && areToolsEnabled
+            #if DEBUG
+            print("[DEBUG] Model changed to \(model.name)")
+            print("[DEBUG] Tools enabled: \(areToolsEnabled)")
+            #endif
         }
     }
+
     private(set) var isLoading = false
     private(set) var downloadProgress: Double = 0
-    var areToolsEnabled = false
+    var areToolsEnabled = true
 
     private var session: LLMSession?
-    var messages: [LLMInput.Message] = []
+    var messages: [LLMInput.Message] {
+        get { session?.messages ?? [] }
+        set { session?.messages = newValue }
+    }
     var isModelLoaded: Bool { session != nil }
-    
+
     init(mockData: String, userlogProvider: @escaping @Sendable () -> String = { "" }) {
         let container = loadMockDataContainer(from: mockData) ?? MockDataContainer()
         self.tools = makeLLMTools(container: container, userlogProvider: userlogProvider)
+        #if DEBUG
+        print("[DEBUG] AI initialized with model: \(model.name)")
+        #endif
     }
 
     func resetMessages() {
         messages = [.system(sysPrompt)]
+        #if DEBUG
+        print("[DEBUG] Messages reset. System prompt inserted.")
+        #endif
     }
 
     func loadLLM() async {
-        // Don't try to download/load anything for FoundationModels pipeline!
         guard model != .foundation else { return }
 
         isLoading = true
@@ -142,6 +155,9 @@ final class AI {
 
         // Release memory first if a previous model was loaded
         session = nil
+        #if DEBUG
+        print("[DEBUG] Starting LLM model download: \(model.id)")
+        #endif
 
         do {
             let downloadModel: LLMSession.DownloadModel = if model.isMLX {
@@ -161,36 +177,39 @@ final class AI {
             }
 
             session = LLMSession(model: downloadModel, tools: areToolsEnabled ? tools : [])
-            session?.messages = messages
-            if messages.isEmpty { resetMessages() }
+            resetMessages()
         } catch {
             print("Failed to load LLM: \(error)")
         }
     }
 
     func ask(_ message: String, attachments: [LLMAttachment]) async throws -> AsyncThrowingStream<String, any Error> {
-        guard model != .foundation else {
-            throw LLMError.failedToLoad(reason: "FoundationModels pipeline does not use ask(); handled separately.")
-        }
-        guard let session else {
-            throw LLMError.failedToLoad(reason: "LLM not loaded")
-        }
-        session.messages = messages
+        guard model != .foundation else { throw LLMError.failedToLoad(reason: "FM pipeline doesn't use ask()") }
+        guard let session else { throw LLMError.failedToLoad(reason: "LLM not loaded") }
+
+//        // ensure the user turn is part of the conversation the model will read
+//        session.messages.append(.user(message, attachments: attachments))
+
+        #if DEBUG
+        print("[DEBUG] Asking LLM: \(message)")
+        print("[DEBUG] Current message count: \(messages.count)")
+        print("[DEBUG] About to call session.streamResponse...")
+        #endif
+        
         return session.streamResponse(to: message, attachments: attachments)
     }
-    
+
     func toggleTools() async {
         areToolsEnabled.toggle()
         if session != nil {
             await loadLLM() // Reload session with/without tools
         }
     }
-}
 
-#if DEBUG
-extension AI {
+    #if DEBUG
     func setSession(_ session: LLMSession) {
         self.session = session
+        print("[DEBUG] Session manually injected (for preview/testing)")
     }
+    #endif
 }
-#endif

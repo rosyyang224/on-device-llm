@@ -1,8 +1,8 @@
-// HomepageClassicSummaryView.swift — layout & buttons refreshed (logic unchanged)
+// HomepageClassicSummaryView.swift — refactored to use one shared viewModel
 import SwiftUI
 
 struct HomepageClassicSummaryView: View {
-    @ObservedObject var soloViewModel: HomepageSummaryViewModel
+    @ObservedObject var viewModel: HomepageSummaryViewModel
     let ai: AI
 
     @State private var stickyBarVisible: Bool = true
@@ -30,6 +30,7 @@ struct HomepageClassicSummaryView: View {
                 ScrollView {
                     VStack(spacing: AppTheme.Spacing.xl) {
 
+                        // ===== Header =====
                         HStack(alignment: .center, spacing: AppTheme.Spacing.m) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: AppTheme.Radius.m, style: .continuous)
@@ -56,13 +57,13 @@ struct HomepageClassicSummaryView: View {
                         .glassCard()
                         .padding(.top, AppTheme.Spacing.m)
 
-                        // ===== Pipeline selector (glass section) =====
+                        // ===== Pipeline selector =====
                         HomepageAIPipelineSelector(ai: ai)
                             .padding(.horizontal, AppTheme.Spacing.l)
 
                         // ===== Content area =====
                         Group {
-                            if soloViewModel.isGenerating {
+                            if viewModel.isGenerating {
                                 VStack(spacing: AppTheme.Spacing.s) {
                                     ProgressView()
                                         .scaleEffect(1.05)
@@ -76,7 +77,7 @@ struct HomepageClassicSummaryView: View {
                                 .glassCard()
                                 .padding(.horizontal, AppTheme.Spacing.l)
 
-                            } else if let summary = soloViewModel.currentSummary {
+                            } else if let summary = viewModel.currentSummary {
                                 VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
                                     HomepageSummaryPanel(
                                         summary: summary,
@@ -109,7 +110,7 @@ struct HomepageClassicSummaryView: View {
                             }
                         }
 
-                        if let error = soloViewModel.errorMessage {
+                        if let error = viewModel.errorMessage {
                             Text(error)
                                 .font(AppTheme.TypeScale.caption)
                                 .foregroundStyle(.red)
@@ -122,7 +123,7 @@ struct HomepageClassicSummaryView: View {
                     .padding(.bottom, AppTheme.Spacing.xxl)
                 }
 
-                // ===== Sticky footer (sleek primary pill) =====
+                // ===== Sticky footer =====
                 ZStack {
                     Rectangle()
                         .fill(.ultraThinMaterial)
@@ -132,20 +133,20 @@ struct HomepageClassicSummaryView: View {
 
                     HStack(spacing: AppTheme.Spacing.m) {
                         Button {
-                            Task { await soloViewModel.generateSummary() }
+                            Task { await viewModel.generateSummary() }
                         } label: {
                             HStack(spacing: AppTheme.Spacing.s) {
-                                if soloViewModel.isGenerating {
+                                if viewModel.isGenerating {
                                     ProgressView().scaleEffect(0.9).tint(.white)
                                 } else {
                                     Image(systemName: "sparkles")
                                         .font(.system(size: 16, weight: .semibold))
                                 }
-                                Text(soloViewModel.isGenerating ? "Generating…" : "Generate Summary")
+                                Text(viewModel.isGenerating ? "Generating…" : "Generate Summary")
                             }
                         }
                         .buttonStyle(PillPrimaryButtonStyle())
-                        .disabled(soloViewModel.isGenerating || ai.isLoading)
+                        .disabled(viewModel.isGenerating || ai.isLoading)
                     }
                     .frame(maxWidth: 760)
                     .padding(.horizontal, AppTheme.Spacing.l)

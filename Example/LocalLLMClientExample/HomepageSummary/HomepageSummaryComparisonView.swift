@@ -1,34 +1,32 @@
 import SwiftUI
 
 struct HomepageSummaryComparisonView: View {
-    @ObservedObject var user1ViewModel: HomepageSummaryViewModel
-    @ObservedObject var user2ViewModel: HomepageSummaryViewModel
-    let aiUser1: AI
-    let aiUser2: AI
+    @ObservedObject var viewModel: HomepageSummaryViewModel
+    let ai: AI
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 HomepageSummaryHeaderView(
                     title: "Portfolio Summary Comparison",
-                    subtitle: "Compare AI summaries for different user types"
+                    subtitle: "Compare AI summaries across perspectives"
                 )
 
-                // --- User 1 Card ---
+                // --- Holdings-Focused Card ---
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("User 1")
+                        Text("Holdings-Focused")
                             .font(.headline)
                             .foregroundColor(.blue)
                         Spacer()
-                        HomepageAIPipelineSelector(ai: aiUser1)
+                        HomepageAIPipelineSelector(ai: ai)
                     }
                     UserSummaryPanel(
-                        viewModel: user1ViewModel,
-                        userType: "User 1",
-                        subtitle: "Holdings-focused",
+                        viewModel: viewModel,
+                        userType: "Holdings",
+                        subtitle: "Holdings-focused analysis",
                         color: .blue,
-                        aiModel: aiUser1.model
+                        aiModel: ai.model
                     )
                 }
                 .padding(.all, 16)
@@ -36,21 +34,21 @@ struct HomepageSummaryComparisonView: View {
                 .cornerRadius(16)
                 .shadow(color: .blue.opacity(0.08), radius: 4, x: 0, y: 2)
 
-                // --- User 2 Card ---
+                // --- Transactions-Focused Card ---
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("User 2")
+                        Text("Transactions-Focused")
                             .font(.headline)
                             .foregroundColor(.green)
                         Spacer()
-                        HomepageAIPipelineSelector(ai: aiUser2)
+                        HomepageAIPipelineSelector(ai: ai)
                     }
                     UserSummaryPanel(
-                        viewModel: user2ViewModel,
-                        userType: "User 2",
-                        subtitle: "Transactions-focused",
+                        viewModel: viewModel,
+                        userType: "Transactions",
+                        subtitle: "Transactions-focused analysis",
                         color: .green,
-                        aiModel: aiUser2.model
+                        aiModel: ai.model
                     )
                 }
                 .padding(.all, 16)
@@ -61,37 +59,33 @@ struct HomepageSummaryComparisonView: View {
                 // --- Action Button ---
                 Button(action: {
                     Task {
-                        await user1ViewModel.generateSummary()
-                        await user2ViewModel.generateSummary()
+                        await viewModel.generateSummary()
                     }
                 }) {
                     HStack {
-                        if user1ViewModel.isGenerating || user2ViewModel.isGenerating {
+                        if viewModel.isGenerating {
                             ProgressView().scaleEffect(0.8).tint(.white)
                         } else {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 16, weight: .semibold))
                         }
-                        Text(user1ViewModel.isGenerating || user2ViewModel.isGenerating
+                        Text(viewModel.isGenerating
                              ? "Generating..."
-                             : "Generate Both Summaries")
+                             : "Generate Summary")
                         .font(.headline)
                         .fontWeight(.semibold)
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(LinearGradient(gradient: Gradient(colors: [.purple, .purple.opacity(0.8)]),
-                                               startPoint: .leading, endPoint: .trailing))
+                    .background(LinearGradient(
+                        gradient: Gradient(colors: [.purple, .purple.opacity(0.8)]),
+                        startPoint: .leading, endPoint: .trailing
+                    ))
                     .cornerRadius(14)
                     .shadow(color: Color.purple.opacity(0.18), radius: 6, x: 0, y: 2)
                 }
-                .disabled(
-                    user1ViewModel.isGenerating
-                    || user2ViewModel.isGenerating
-                    || aiUser1.isLoading
-                    || aiUser2.isLoading
-                )
+                .disabled(viewModel.isGenerating || ai.isLoading)
                 .padding(.horizontal, 8)
                 .padding(.bottom, 20)
             }

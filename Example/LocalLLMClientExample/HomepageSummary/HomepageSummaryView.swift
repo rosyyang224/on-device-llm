@@ -6,103 +6,91 @@ import FoundationModels
 struct HomepageSummaryView: View {
     init(
         mockDataContainer: MockDataContainer,
-        aiClassic: AI?,
-        aiUser1: AI?,
-        aiUser2: AI?,
-        summaryModeIsComparison: Bool,
-        onToggleComparison: @escaping (Bool) -> Void,
-        requestLoadClassic: @escaping () -> Void,
-        requestLoadUserAIs: @escaping () -> Void
+        ai: AI
     ) {
         self.mockDataContainer = mockDataContainer
-        self.aiClassic = aiClassic
-        self.aiUser1 = aiUser1
-        self.aiUser2 = aiUser2
-        self.summaryModeIsComparison = summaryModeIsComparison
-        self.onToggleComparison = onToggleComparison
-        self.requestLoadClassic = requestLoadClassic
-        self.requestLoadUserAIs = requestLoadUserAIs
-        _soloViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
-        _user1ViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
-        _user2ViewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
+        self.ai = ai
+        _viewModel = StateObject(wrappedValue: HomepageSummaryViewModel())
     }
-    
+
     let mockDataContainer: MockDataContainer
-    let aiClassic: AI?
-    let aiUser1: AI?
-    let aiUser2: AI?
-    let summaryModeIsComparison: Bool
-    let onToggleComparison: (Bool) -> Void
-    let requestLoadClassic: () -> Void
-    let requestLoadUserAIs: () -> Void
-    
-    @StateObject private var soloViewModel = HomepageSummaryViewModel()
-    @StateObject private var user1ViewModel = HomepageSummaryViewModel()
-    @StateObject private var user2ViewModel = HomepageSummaryViewModel()
+    let ai: AI
+
+    @StateObject private var viewModel: HomepageSummaryViewModel
+    @State private var isComparison: Bool = false
 
     var body: some View {
-        let currentLoading =
-            summaryModeIsComparison
-            ? ((user1ViewModel.chatViewModel?.ai.isLoading ?? false) ||
-               (user2ViewModel.chatViewModel?.ai.isLoading ?? false))
-            : (soloViewModel.chatViewModel?.ai.isLoading ?? false)
-
-        let currentProgress: Double =
-            summaryModeIsComparison
-            ? max(user1ViewModel.chatViewModel?.ai.downloadProgress ?? 0,
-                  user2ViewModel.chatViewModel?.ai.downloadProgress ?? 0)
-            : (soloViewModel.chatViewModel?.ai.downloadProgress ?? 0)
+        let currentLoading = ai.isLoading
+        let currentProgress = ai.downloadProgress
 
         NavigationStack {
             VStack(spacing: AppTheme.Spacing.m) {
-                // Mode toggle
-                Toggle(isOn: Binding(
-                    get: { summaryModeIsComparison },
-                    set: { newValue in
-                        onToggleComparison(newValue)
-                        if newValue { requestLoadUserAIs() } else { requestLoadClassic() }
+
+                // === Mode toggle (Classic vs User Prefs) ===
+                HStack(spacing: AppTheme.Spacing.s) {
+                    PipelineToggleButton(
+                        title: "Classic",
+                        isSelected: !isComparison
+                    ) {
+                        if isComparison {
+                            isComparison = false
+                            print("[DEBUG] HomepageSummaryView: switched -> Classic")
+                            // Start new session for classic mode
+                            ai.resetMessages()
+                        }
                     }
-                )) {
-                    Label("Add User Preferences", systemImage: "person.2.crop.square.stack")
+
+                    PipelineToggleButton(
+                        title: "User Prefs",
+                        isSelected: isComparison
+                    ) {
+                        if !isComparison {
+                            isComparison = true
+                            print("[DEBUG] HomepageSummaryView: switched -> Comparison")
+                            // Start new session for comparison mode
+                            ai.resetMessages()
+                        }
+                    }
                 }
-                .toggleStyle(SwitchToggleStyle(tint: AppTheme.purple))
-                .padding(.horizontal, AppTheme.Spacing.l)
                 .padding(.top, AppTheme.Spacing.m)
 
-                // Body
+                // ===== Optional Summary Card (shows when we have text) =====
+                if let summary = viewModel.currentSummary, !summary.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Portfolio Snapshot")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+
+                        Text(summary)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.Radius.m)
+                            .fill(AppTheme.background)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .padding(.horizontal, AppTheme.Spacing.l)
+                }
+
+                // ===== Body: Classic or Comparison =====
                 Group {
-                    if summaryModeIsComparison {
-                        if let aiUser1 = aiUser1, let aiUser2 = aiUser2 {
-                            HomepageSummaryComparisonView(
-                                user1ViewModel: user1ViewModel,
-                                user2ViewModel: user2ViewModel,
-                                aiUser1: aiUser1,
-                                aiUser2: aiUser2
-                            )
-                            .transition(.opacity)
-                        } else {
-                            ProgressView("Loading User Preference AIs…")
-                                .padding()
-                                .card()
-                                .padding(.horizontal, AppTheme.Spacing.l)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        }
+                    if isComparison {
+                        // Uses your shared viewModel + single AI
+                        HomepageSummaryComparisonView(
+                            viewModel: viewModel,
+                            ai: ai
+                        )
                     } else {
-                        if let aiClassic = aiClassic {
-                            HomepageClassicSummaryView(
-                                soloViewModel: soloViewModel,
-                                ai: aiClassic
-                            )
-                            .transition(.opacity)
-                        } else {
-                            ProgressView("Loading Classic AI…")
-                                .padding()
-                                .card()
-                                .padding(.horizontal, AppTheme.Spacing.l)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        }
+                        HomepageClassicSummaryView(
+                            viewModel: viewModel,
+                            ai: ai
+                        )
                     }
                 }
+                .transition(.opacity)
             }
             .background(AppTheme.background.ignoresSafeArea())
             .toolbar {
@@ -122,38 +110,28 @@ struct HomepageSummaryView: View {
                         }
                     }
                     .padding(AppTheme.Spacing.l)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppTheme.Radius.m, style: .continuous))
+                    .background(
+                        .regularMaterial,
+                        in: RoundedRectangle(cornerRadius: AppTheme.Radius.m, style: .continuous)
+                    )
                     .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
                     .padding()
                 }
                 .transition(.opacity)
             }
         }
-        // Assign ChatViewModels (unchanged logic)
-        .task(id: ObjectIdentifier(aiClassic as AnyObject)) {
-            if let ai = aiClassic {
-                print("[DEBUG] HomepageSummaryView: Assigning aiClassic to soloViewModel")
-                soloViewModel.setChatViewModel(
-                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil)
-                )
-            }
+        // Initialize ViewModel with shared AI instance
+        .onAppear {
+            print("[DEBUG] HomepageSummaryView: Setting up viewModel with shared AI")
+            viewModel.setChatViewModel(
+                ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: nil)
+            )
         }
-        .task(id: ObjectIdentifier(aiUser1 as AnyObject)) {
-            if let ai = aiUser1 {
-                print("[DEBUG] HomepageSummaryView: Assigning aiUser1 to user1ViewModel")
-                user1ViewModel.setChatViewModel(
-                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref1)
-                )
-            }
+        // Reset session when switching modes
+        .onChange(of: isComparison) { _, _ in
+            print("[DEBUG] HomepageSummaryView: Mode changed, resetting AI session")
+            ai.resetMessages()
+            viewModel.clearCurrentSummary()
         }
-        .task(id: ObjectIdentifier(aiUser2 as AnyObject)) {
-            if let ai = aiUser2 {
-                print("[DEBUG] HomepageSummaryView: Assigning aiUser2 to user2ViewModel")
-                user2ViewModel.setChatViewModel(
-                    ChatViewModel(ai: ai, mockDataContainer: mockDataContainer, userPreferenceData: userPref2)
-                )
-            }
-        }
-        // Keep on-demand model loading behavior as-is
     }
 }
