@@ -9,7 +9,6 @@ struct HomepageClassicSummaryView: View {
 
     var body: some View {
         ZStack {
-            // Subtle decorative background to match TripPlanner feel
             AppTheme.background.ignoresSafeArea()
                 .overlay(
                     ZStack {
@@ -79,11 +78,11 @@ struct HomepageClassicSummaryView: View {
 
                             } else if let summary = viewModel.currentSummary {
                                 VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
-                                    HomepageSummaryPanel(
-                                        summary: summary,
-                                        modelName: ai.model.name,
-                                        color: AppTheme.primaryBlue
-                                    )
+                                    VStack(alignment: .leading, spacing: AppTheme.Spacing.m) {
+                                    MarkdownChatText(text: summary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        .textSelection(.enabled)
+                                    }
                                 }
                                 .padding(AppTheme.Spacing.l)
                                 .glassCard()

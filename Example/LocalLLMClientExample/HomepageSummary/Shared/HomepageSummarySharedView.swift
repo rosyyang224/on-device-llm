@@ -56,7 +56,7 @@ struct HomepageAIPipelineSelector: View {
                 action: {
                     print("[DEBUG] Pipeline selected: Llama.cpp (Gemma3-4B) - starting new session")
                     ai.model = .gemma3_4b
-                    ai.resetMessages() // New session for new model
+                    ai.resetMessages()
                 }
             )
         }

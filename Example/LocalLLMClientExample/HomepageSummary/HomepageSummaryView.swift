@@ -54,27 +54,6 @@ struct HomepageSummaryView: View {
                 }
                 .padding(.top, AppTheme.Spacing.m)
 
-                // ===== Optional Summary Card (shows when we have text) =====
-                if let summary = viewModel.currentSummary, !summary.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Portfolio Snapshot")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-
-                        Text(summary)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.Radius.m)
-                            .fill(AppTheme.background)
-                    )
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-                    .padding(.horizontal, AppTheme.Spacing.l)
-                }
-
                 // ===== Body: Classic or Comparison =====
                 Group {
                     if isComparison {
@@ -100,24 +79,8 @@ struct HomepageSummaryView: View {
         .disabled(currentLoading)
         .overlay {
             if currentLoading {
-                ZStack {
-                    Color.black.opacity(0.45).ignoresSafeArea()
-                    Group {
-                        if currentProgress < 1 {
-                            ProgressView("Downloading LLM…", value: currentProgress)
-                        } else {
-                            ProgressView("Loading LLM…")
-                        }
-                    }
-                    .padding(AppTheme.Spacing.l)
-                    .background(
-                        .regularMaterial,
-                        in: RoundedRectangle(cornerRadius: AppTheme.Radius.m, style: .continuous)
-                    )
-                    .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
-                    .padding()
-                }
-                .transition(.opacity)
+                LoadingOverlay(progress: currentProgress)
+                    .transition(.opacity)
             }
         }
         // Initialize ViewModel with shared AI instance
