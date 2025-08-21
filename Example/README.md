@@ -131,7 +131,7 @@ This project does **not currently include** the PDF processing pipeline — but 
 
 This pipeline enables both natural language **summarization** and **querying** of structured data such as holdings, transactions, and user activity logs. It supports multiple LLM backends and includes infrastructure for tool-based data retrieval and memory continuity.
 
-It is based on [`LocalLLMClient`](https://github.com/marella/LocalLLMClient) and integrates both Apple FoundationModels and locally hosted LLMs via MLX and llama.cpp.
+It is based on [`LocalLLMClient`](https://github.com/tattn/LocalLLMClient) and integrates both Apple FoundationModels and locally hosted LLMs via MLX and llama.cpp.
 
 ---
 
