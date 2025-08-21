@@ -29,18 +29,20 @@ struct QueryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                VStack(spacing: 0) {
-                    // Header + suggestions (your components)
-                    QueryHeaderCard()
-                    SuggestedQueriesStrip(suggested: suggested)
-
-                    // Messages
-                    MessageList(
-                        messages: viewModel.messages,
-                        isGenerating: viewModel.isGenerating
-                    )
-
-                    // Composer
+                ScrollView {
+                    VStack(spacing: 0) {
+                        QueryHeaderCard()
+                        SuggestedQueriesStrip(suggested: suggested)
+                        
+                        MessageList(
+                            messages: viewModel.messages,
+                            isGenerating: viewModel.isGenerating
+                        )
+                    }
+                }
+                
+                VStack {
+                    Spacer()
                     BottomBar(
                         text: $viewModel.inputText,
                         attachments: $viewModel.inputAttachments,
@@ -53,7 +55,7 @@ struct QueryView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                 }
-                // Loading overlay (your component)
+                
                 LLMLoadingOverlay(isLoading: ai.isLoading, progress: ai.downloadProgress)
             }
             .navigationTitle(ai.model.name)
