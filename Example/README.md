@@ -9,7 +9,7 @@ To run the example app:
 
 1. Clone the repository:
   ```bash
-  git clone --recursive HTTPS_URL
+  git clone --recursive https://github.com/rosyyang224/on-device-llm.git
   ```
   If you already cloned the repository without `--recursive`, run:
   ```bash
