@@ -46,11 +46,6 @@ final class ConversationContinuity {
     }
 
     // MARK: - Rebuild
-
-    /// If over budget, rebuild the underlying session and seed minimal continuity.
-    ///
-    /// - Parameter recreate: async closure that recreates and returns a fresh `LanguageModelSession`.
-    /// - Returns: A new session if rebuilt, otherwise `nil`.
     func maybeRebuildIfNeeded(
         recreate: @escaping () async throws -> LanguageModelSession
     ) async throws -> LanguageModelSession? {

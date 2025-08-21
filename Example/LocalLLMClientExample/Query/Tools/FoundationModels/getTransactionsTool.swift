@@ -109,7 +109,7 @@ struct FoundationModelsGetTransactionsTool: Tool {
         }
 
         let processedResult = Compressor.processData(filtered, customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
-        print("[GetTransactionsTool] Applied compression! original: \(filtered.count) transactions, compressed size: \(Compressor.estimateTokens(processedResult)) tokens")
+        print("[GetTransactionsTool] Applied compression!")
         
         // Cache the processed result
         cache.cacheToolCall(toolName: "GetTransactionsTool", arguments: cacheArguments, result: processedResult)

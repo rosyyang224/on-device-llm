@@ -142,7 +142,7 @@ struct LocalLLMGetPortfolioValTool {
         }
         
         let formattedOutput = Compressor.processData(filtered)
-        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
+        print("[GetPortfolioValTool] Applied compression!")
         
         let result: [String: Any] = [
             "portfolio_values": filtered,

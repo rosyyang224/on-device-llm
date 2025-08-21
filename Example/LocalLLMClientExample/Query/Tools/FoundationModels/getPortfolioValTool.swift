@@ -107,17 +107,18 @@ struct FoundationModelsGetPortfolioValTool: Tool {
             // Single portfolio value
             result = Compressor.processData(filtered[0], customCompressionThreshold: Compressor.CompressionConfig.aggressive.maxTokens)
         } else {
-            // Multiple portfolio values - create a summary
+            let sections: [String] = filtered.enumerated().map { index, portfolio in
+                "Account \(index + 1):\n\(Compressor.compressPortfolioVals([portfolio]))"
+            }
+
             result = """
             Portfolio Summary (\(filtered.count) accounts):
-            
-            \(filtered.enumerated().map { index, portfolio in
-                "Account \(index + 1):\n\(Compressor.compressPortfolioValue(portfolio))"
-            }.joined(separator: "\n\n"))
+
+            \(sections.joined(separator: "\n\n")) 
             """
         }
         
-        print("[GetPortfolioValTool] Applied compression! original: \(filtered.count) portfolio values, compressed size: \(Compressor.estimateTokens(result)) tokens")
+        print("[GetPortfolioValTool] Applied compression!")
         
         // Cache the result
         cache.cacheToolCall(toolName: "GetPortfolioValTool", arguments: cacheArguments, result: result)

@@ -80,7 +80,7 @@ struct LocalLLMGetTransactionsTool {
 
         let formattedOutput = Compressor.processData(filtered)
         
-        print("[GetTransactionsTool] Applied compression! original: \(filtered.count) transactions, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
+        print("[GetTransactionsTool] Applied compression!")
         
         let result: [String: Any] = [
             "transactions": filtered,

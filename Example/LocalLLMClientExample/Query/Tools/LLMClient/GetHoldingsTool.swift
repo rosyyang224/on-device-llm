@@ -85,7 +85,7 @@ struct LocalLLMGetHoldingsTool {
 
         // Use the existing smart compression logic
         let formattedOutput = Compressor.processData(filtered)
-        print("[GetHoldingsTool] Applied compression! original: \(filtered.count) holdings, compressed size: \(Compressor.estimateTokens(formattedOutput)) tokens")
+        print("[GetHoldingsTool] Applied compression!")
         
         let result: [String: Any] = [
             "holdings": filtered,

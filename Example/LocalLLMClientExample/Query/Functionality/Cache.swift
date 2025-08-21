@@ -7,7 +7,7 @@
 
 import Foundation
 
-final class Cache {
+final class Cache: @unchecked Sendable {
     static let shared = Cache()
     
     private var contextCache: [String: Any] = [:]
