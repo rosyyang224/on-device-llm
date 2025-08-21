@@ -127,7 +127,6 @@ final class ChatViewModel {
 
             let lastIsWord   = CharacterSet.alphanumerics.contains(last)
             let firstIsWord  = CharacterSet.alphanumerics.contains(first)
-            let firstIsPunct = CharacterSet.punctuationCharacters.contains(first)
 
             if lastIsWord && firstIsWord {
                 generatingText.append(" ")

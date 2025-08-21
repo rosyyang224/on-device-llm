@@ -5,7 +5,6 @@ import LocalLLMClientMLX
 struct ChatView: View {
     @EnvironmentObject var ai: AI 
     @State var viewModel: ChatViewModel
-    @State private var position = ScrollPosition(idType: LLMInput.Message.ID.self)
 
     var body: some View {
         VStack {

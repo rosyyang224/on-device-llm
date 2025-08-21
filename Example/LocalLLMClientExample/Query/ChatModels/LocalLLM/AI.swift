@@ -187,9 +187,6 @@ final class AI: ObservableObject {
         guard model != .foundation else { throw LLMError.failedToLoad(reason: "FM pipeline doesn't use ask()") }
         guard let session else { throw LLMError.failedToLoad(reason: "LLM not loaded") }
 
-//        // ensure the user turn is part of the conversation the model will read
-//        session.messages.append(.user(message, attachments: attachments))
-
         #if DEBUG
         print("[DEBUG] Asking LLM: \(message)")
         print("[DEBUG] Current message count: \(messages.count)")
@@ -200,9 +197,10 @@ final class AI: ObservableObject {
     }
 
     func toggleTools() async {
+        guard model.supportsTools else { return }
         areToolsEnabled.toggle()
         if session != nil {
-            await loadLLM() // Reload session with/without tools
+            await loadLLM()
         }
     }
 
